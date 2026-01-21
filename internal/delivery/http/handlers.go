@@ -13,22 +13,37 @@ import (
 )
 
 type Handler struct {
-	AuthUsecase        domain.AuthUsecase
-	CourseUsecase      domain.CourseUsecase
-	LabUsecase         domain.LabUsecase
-	CertificateUsecase domain.CertificateUsecase
+	AuthUsecase      domain.AuthUsecase
+	UserUsecase      domain.UserUsecase
+	CourseUsecase    domain.CourseUsecase
+	LabUsecase       domain.LabUsecase
+	CertUsecase      domain.CertificateUsecase
+	DashboardUsecase domain.DashboardUsecase
+	ReportUsecase    domain.ReportUsecase
 }
 
-func NewHandler(au domain.AuthUsecase, cu domain.CourseUsecase, lu domain.LabUsecase, certUC domain.CertificateUsecase) *Handler {
+func NewHandler(
+	au domain.AuthUsecase,
+	uu domain.UserUsecase,
+	cu domain.CourseUsecase,
+	lu domain.LabUsecase,
+	certu domain.CertificateUsecase,
+	du domain.DashboardUsecase,
+	ru domain.ReportUsecase,
+) *Handler {
 	return &Handler{
-		AuthUsecase:        au,
-		CourseUsecase:      cu,
-		LabUsecase:         lu,
-		CertificateUsecase: certUC,
+		AuthUsecase:      au,
+		UserUsecase:      uu,
+		CourseUsecase:    cu,
+		LabUsecase:       lu,
+		CertUsecase:      certu,
+		DashboardUsecase: du,
+		ReportUsecase:    ru,
 	}
 }
 
-// formatValidationErrors formats validation errors into a readable format.
+// ========== UTILITY FUNCTIONS ==========
+
 func formatValidationErrors(err error) gin.H {
 	var ve validator.ValidationErrors
 	if errors.As(err, &ve) {
@@ -41,7 +56,6 @@ func formatValidationErrors(err error) gin.H {
 	return gin.H{"error": "Invalid request: " + err.Error()}
 }
 
-// getUserID extracts user ID from context
 func getUserID(c *gin.Context) (uint, error) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -50,7 +64,15 @@ func getUserID(c *gin.Context) (uint, error) {
 	return userID.(uint), nil
 }
 
-// --- Auth Handlers ---
+func getUserRole(c *gin.Context) (string, error) {
+	role, exists := c.Get("role")
+	if !exists {
+		return "", errors.New("role not found in token")
+	}
+	return role.(string), nil
+}
+
+// ========== AUTH HANDLERS ==========
 
 func (h *Handler) Register(c *gin.Context) {
 	var user domain.User
@@ -67,7 +89,16 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully. Please check your email for verification."})
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "User registered successfully",
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+		},
+	})
 }
 
 func (h *Handler) Login(c *gin.Context) {
@@ -85,6 +116,7 @@ func (h *Handler) Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
@@ -130,7 +162,51 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "If the email exists, a password reset link has been sent."})
 }
 
-// --- Course Handlers ---
+// ========== DASHBOARD HANDLERS ==========
+
+func (h *Handler) GetStudentDashboard(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := h.DashboardUsecase.GetStudentDashboard(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, data)
+}
+
+func (h *Handler) GetInstructorDashboard(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := h.DashboardUsecase.GetInstructorDashboard(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, data)
+}
+
+func (h *Handler) GetAdminDashboard(c *gin.Context) {
+	data, err := h.DashboardUsecase.GetAdminDashboard(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, data)
+}
+
+// ========== COURSE HANDLERS ==========
 
 func (h *Handler) CreateCourse(c *gin.Context) {
 	userID, err := getUserID(c)
@@ -160,8 +236,88 @@ func (h *Handler) CreateCourse(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusCreated, course)
 }
+
+func (h *Handler) GetAllCourses(c *gin.Context) {
+	courses, err := h.CourseUsecase.GetAllCourses(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"courses": courses,
+		"count":   len(courses),
+	})
+}
+
+func (h *Handler) GetCourseDetail(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	// Get user ID if authenticated
+	var userIDPtr *uint
+	if userID, err := getUserID(c); err == nil {
+		userIDPtr = &userID
+	}
+
+	detail, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), uint(id), userIDPtr)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, detail)
+}
+
+func (h *Handler) EnrollCourse(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	courseID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	if err := h.CourseUsecase.EnrollStudent(c.Request.Context(), userID, uint(courseID)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully enrolled in course"})
+}
+
+func (h *Handler) GetMyEnrollments(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	enrollments, err := h.CourseUsecase.GetStudentEnrollments(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"enrollments": enrollments,
+		"count":       len(enrollments),
+	})
+}
+
+// ========== MODULE HANDLERS ==========
 
 func (h *Handler) AddModule(c *gin.Context) {
 	courseIDStr := c.PostForm("course_id")
@@ -203,30 +359,126 @@ func (h *Handler) AddModule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusCreated, module)
 }
 
-func (h *Handler) GetCourseDetail(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseUint(idStr, 10, 32)
+func (h *Handler) GetModulesWithProgress(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	courseIDStr := c.Param("id")
+	courseID, err := strconv.ParseUint(courseIDStr, 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
 		return
 	}
 
-	course, modules, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), uint(id))
+	modules, err := h.CourseUsecase.GetModulesWithProgress(c.Request.Context(), userID, uint(courseID))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"course":  course,
 		"modules": modules,
+		"count":   len(modules),
 	})
 }
 
-// --- Lab Handlers ---
+func (h *Handler) MarkModuleComplete(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req struct {
+		ModuleID string `json:"module_id" binding:"required"`
+		CourseID uint   `json:"course_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
+		return
+	}
+
+	if err := h.CourseUsecase.MarkModuleComplete(c.Request.Context(), userID, req.ModuleID, req.CourseID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Module marked as complete"})
+}
+
+// ========== ASSIGNMENT HANDLERS ==========
+
+func (h *Handler) SubmitAssignment(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	moduleID := c.PostForm("module_id")
+	courseIDStr := c.PostForm("course_id")
+	courseID, err := strconv.ParseUint(courseIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course_id"})
+		return
+	}
+
+	filePath, err := utils.HandleUpload(c, "file")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file: " + err.Error()})
+		return
+	}
+
+	assignment := &domain.Assignment{
+		UserID:   userID,
+		ModuleID: moduleID,
+		CourseID: uint(courseID),
+		FileURL:  filePath,
+	}
+
+	if err := h.CourseUsecase.SubmitAssignment(c.Request.Context(), assignment); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Assignment submitted successfully"})
+}
+
+func (h *Handler) GradeAssignment(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req struct {
+		AssignmentID uint    `json:"assignment_id" binding:"required"`
+		Grade        float64 `json:"grade" binding:"required"`
+		Feedback     string  `json:"feedback"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
+		return
+	}
+
+	if err := h.CourseUsecase.GradeAssignment(c.Request.Context(), req.AssignmentID, req.Grade, req.Feedback, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Assignment graded successfully"})
+}
+
+// ========== LAB HANDLERS ==========
 
 func (h *Handler) CreateLab(c *gin.Context) {
 	var lab domain.Lab
@@ -235,15 +487,25 @@ func (h *Handler) CreateLab(c *gin.Context) {
 		return
 	}
 
-	if lab.Status == "" {
-		lab.Status = "scheduled"
-	}
-
 	if err := h.LabUsecase.CreateLab(c.Request.Context(), &lab); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusCreated, lab)
+}
+
+func (h *Handler) GetAllLabs(c *gin.Context) {
+	labs, err := h.LabUsecase.GetAllLabs(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"labs":  labs,
+		"count": len(labs),
+	})
 }
 
 func (h *Handler) UpdateLabStatus(c *gin.Context) {
@@ -262,16 +524,11 @@ func (h *Handler) UpdateLabStatus(c *gin.Context) {
 		return
 	}
 
-	validStatuses := map[string]bool{"scheduled": true, "open": true, "closed": true}
-	if !validStatuses[req.Status] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status. Must be: scheduled, open, or closed"})
-		return
-	}
-
 	if err := h.LabUsecase.UpdateLabStatus(c.Request.Context(), uint(labID), req.Status); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Lab status updated successfully"})
 }
 
@@ -293,10 +550,11 @@ func (h *Handler) StudentEnrollInLab(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully enrolled in lab"})
 }
 
-func (h *Handler) SubmitGrade(c *gin.Context) {
+func (h *Handler) SubmitLabGrade(c *gin.Context) {
 	instructorID, err := getUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -307,6 +565,7 @@ func (h *Handler) SubmitGrade(c *gin.Context) {
 		LabID     uint   `json:"lab_id" binding:"required"`
 		StudentID uint   `json:"student_id" binding:"required"`
 		Grade     string `json:"grade" binding:"required"`
+		Feedback  string `json:"feedback"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -314,18 +573,13 @@ func (h *Handler) SubmitGrade(c *gin.Context) {
 		return
 	}
 
-	err = h.LabUsecase.SubmitGrade(c.Request.Context(), instructorID, req.StudentID, req.LabID, req.Grade)
+	err = h.LabUsecase.SubmitGrade(c.Request.Context(), instructorID, req.StudentID, req.LabID, req.Grade, req.Feedback)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":    "Grade submitted successfully",
-		"lab_id":     req.LabID,
-		"student_id": req.StudentID,
-		"grade":      req.Grade,
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "Grade submitted successfully"})
 }
 
 func (h *Handler) GetUngradedStudents(c *gin.Context) {
@@ -342,24 +596,13 @@ func (h *Handler) GetUngradedStudents(c *gin.Context) {
 		return
 	}
 
-	// Transform to simpler response
-	var ungradedStudents []domain.UngradedStudent
-	for _, student := range students {
-		ungradedStudents = append(ungradedStudents, domain.UngradedStudent{
-			UserID: student.ID,
-			Name:   student.Name,
-			Email:  student.Email,
-		})
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"lab_id":   labID,
-		"students": ungradedStudents,
-		"count":    len(ungradedStudents),
+		"students": students,
+		"count":    len(students),
 	})
 }
 
-// --- Certificate Handlers ---
+// ========== CERTIFICATE HANDLERS ==========
 
 func (h *Handler) GetUserCertificates(c *gin.Context) {
 	userID, err := getUserID(c)
@@ -368,7 +611,7 @@ func (h *Handler) GetUserCertificates(c *gin.Context) {
 		return
 	}
 
-	certs, err := h.CertificateUsecase.GetUserCertificates(c.Request.Context(), userID)
+	certs, err := h.CertUsecase.GetUserCertificates(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -377,5 +620,101 @@ func (h *Handler) GetUserCertificates(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"certificates": certs,
 		"count":        len(certs),
+	})
+}
+
+func (h *Handler) GetPendingCertificates(c *gin.Context) {
+	certs, err := h.CertUsecase.GetPendingCertificates(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"certificates": certs,
+		"count":        len(certs),
+	})
+}
+
+func (h *Handler) ApproveCertificate(c *gin.Context) {
+	approverID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	certID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid certificate ID"})
+		return
+	}
+
+	if err := h.CertUsecase.ApproveCertificate(c.Request.Context(), uint(certID), approverID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Certificate approved successfully"})
+}
+
+// ========== USER MANAGEMENT (ADMIN) ==========
+
+func (h *Handler) GetAllUsers(c *gin.Context) {
+	users, err := h.UserUsecase.GetAllUsers(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"users": users,
+		"count": len(users),
+	})
+}
+
+func (h *Handler) CreateUser(c *gin.Context) {
+	var user domain.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
+		return
+	}
+
+	if err := h.UserUsecase.CreateUser(c.Request.Context(), &user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully", "user": user})
+}
+
+// ========== REPORTS ==========
+
+func (h *Handler) GetStudentPerformance(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	performance, err := h.ReportUsecase.GetStudentPerformance(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, performance)
+}
+
+func (h *Handler) GetAllStudentsPerformance(c *gin.Context) {
+	performances, err := h.ReportUsecase.GetAllStudentsPerformance(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"performances": performances,
+		"count":        len(performances),
 	})
 }

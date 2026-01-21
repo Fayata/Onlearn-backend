@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"onlearn-backend/config"
-	"onlearn-backend/internal/domain"
 	httpDelivery "onlearn-backend/internal/delivery/http"
+	"onlearn-backend/internal/domain"
 	"onlearn-backend/internal/repository"
 	"onlearn-backend/internal/usecase"
 
@@ -30,27 +30,84 @@ func main() {
 		log.Fatal("Migration failed:", err)
 	}
 
-	// Initialize repositories
+	// ========== Initialize Repositories ==========
 	userRepo := repository.NewUserRepository(postgres)
 	courseRepo := repository.NewCourseRepository(postgres)
+	enrollmentRepo := repository.NewEnrollmentRepository(postgres)
+	moduleProgressRepo := repository.NewModuleProgressRepository(postgres)
+	assignmentRepo := repository.NewAssignmentRepository(postgres)
 	labRepo := repository.NewLabRepository(postgres)
 	certRepo := repository.NewCertificateRepository(postgres)
 	moduleRepo := repository.NewModuleRepository(mongo)
 
-	// Initialize usecases
+	// ========== Initialize Usecases ==========
 	authUsecase := usecase.NewAuthUsecase(userRepo)
-	courseUsecase := usecase.NewCourseUsecase(courseRepo, moduleRepo, certRepo)
-	labUsecase := usecase.NewLabUsecase(labRepo, userRepo)
-	certUsecase := usecase.NewCertificateUsecase(certRepo, userRepo)
+
+	userUsecase := usecase.NewUserUsecase(userRepo)
+
+	courseUsecase := usecase.NewCourseUsecase(
+		courseRepo,
+		moduleRepo,
+		enrollmentRepo,
+		moduleProgressRepo,
+		assignmentRepo,
+		certRepo,
+	)
+
+	labUsecase := usecase.NewLabUsecase(
+		labRepo,
+		userRepo,
+		certRepo,
+	)
+
+	certUsecase := usecase.NewCertificateUsecase(
+		certRepo,
+		userRepo,
+		courseRepo,
+		labRepo,
+	)
+
+	dashboardUsecase := usecase.NewDashboardUsecase(
+		userRepo,
+		courseRepo,
+		enrollmentRepo,
+		moduleRepo,
+		moduleProgressRepo,
+		assignmentRepo,
+		labRepo,
+		certRepo,
+	)
+
+	reportUsecase := usecase.NewReportUsecase(
+		userRepo,
+		enrollmentRepo,
+		assignmentRepo,
+		certRepo,
+	)
 
 	// Seed demo users
 	seedUsers(authUsecase)
 
-	// Initialize handlers
-	apiHandler := httpDelivery.NewHandler(authUsecase, courseUsecase, labUsecase, certUsecase)
-	webHandler := httpDelivery.NewWebHandler(authUsecase, courseUsecase, labUsecase, certUsecase)
+	// ========== Initialize Handlers ==========
+	apiHandler := httpDelivery.NewHandler(
+		authUsecase,
+		userUsecase,
+		courseUsecase,
+		labUsecase,
+		certUsecase,
+		dashboardUsecase,
+		reportUsecase,
+	)
 
-	// Initialize router with both API and Web handlers
+	webHandler := httpDelivery.NewWebHandler(
+		authUsecase,
+		courseUsecase,
+		labUsecase,
+		certUsecase,
+		dashboardUsecase,
+	)
+
+	// ========== Initialize Router ==========
 	router := httpDelivery.InitRouter(apiHandler)
 	httpDelivery.InitWebRouter(router, webHandler)
 
@@ -60,9 +117,17 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server running on port %s", port)
-	log.Printf("Web UI: http://localhost:%s", port)
-	log.Printf("API: http://localhost:%s/api/v1", port)
+	log.Printf("=================================================")
+	log.Printf("🚀 OnLearn Backend Server Starting...")
+	log.Printf("=================================================")
+	log.Printf("📍 Server running on port %s", port)
+	log.Printf("🌐 Web UI: http://localhost:%s", port)
+	log.Printf("🔌 API: http://localhost:%s/api/v1", port)
+	log.Printf("=================================================")
+	log.Printf("📚 Demo Accounts:")
+	log.Printf("   Student: student@onlearn.com / password123")
+	log.Printf("   Instructor: instructor@onlearn.com / password123")
+	log.Printf("=================================================")
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)
@@ -70,6 +135,8 @@ func main() {
 }
 
 func seedUsers(authUsecase domain.AuthUsecase) {
+	ctx := context.Background()
+
 	// Student
 	student := &domain.User{
 		Name:     "Demo Student",
@@ -77,9 +144,11 @@ func seedUsers(authUsecase domain.AuthUsecase) {
 		Password: "password123",
 		Role:     domain.RoleStudent,
 	}
-	err := authUsecase.Register(context.Background(), student)
-	if err != nil && err.Error() != "email already registered" {
+	err := authUsecase.Register(ctx, student)
+	if err != nil && err.Error() != "email already exists" {
 		log.Printf("Failed to seed student: %v", err)
+	} else if err == nil {
+		log.Println("✅ Demo student account created")
 	}
 
 	// Instructor
@@ -89,8 +158,24 @@ func seedUsers(authUsecase domain.AuthUsecase) {
 		Password: "password123",
 		Role:     domain.RoleInstructor,
 	}
-	err = authUsecase.Register(context.Background(), instructor)
-	if err != nil && err.Error() != "email already registered" {
+	err = authUsecase.Register(ctx, instructor)
+	if err != nil && err.Error() != "email already exists" {
 		log.Printf("Failed to seed instructor: %v", err)
+	} else if err == nil {
+		log.Println("✅ Demo instructor account created")
+	}
+
+	// Admin
+	admin := &domain.User{
+		Name:     "Demo Admin",
+		Email:    "admin@onlearn.com",
+		Password: "password123",
+		Role:     domain.RoleAdmin,
+	}
+	err = authUsecase.Register(ctx, admin)
+	if err != nil && err.Error() != "email already exists" {
+		log.Printf("Failed to seed admin: %v", err)
+	} else if err == nil {
+		log.Println("✅ Demo admin account created")
 	}
 }

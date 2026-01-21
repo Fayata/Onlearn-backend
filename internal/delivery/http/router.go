@@ -7,41 +7,125 @@ import (
 func InitRouter(handler *Handler) *gin.Engine {
 	r := gin.Default()
 
-	// Serve static files from the "uploads" directory
+	// CORS middleware
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+
+	// Serve static files
 	r.Static("/uploads", "./uploads")
 
-	// Public Routes
+	// API v1
 	api := r.Group("/api/v1")
 	{
-		api.POST("/register", handler.Register)
-		api.POST("/login", handler.Login)
-		api.POST("/forgot-password", handler.ForgotPassword)
-	}
+		// ========== PUBLIC ROUTES ==========
+		auth := api.Group("/auth")
+		{
+			auth.POST("/register", handler.Register)
+			auth.POST("/login", handler.Login)
+			auth.POST("/forgot-password", handler.ForgotPassword)
+		}
 
-	// Protected Routes (Student, Instructor, Admin)
-	protected := api.Group("/")
-	protected.Use(AuthMiddleware())
-	{
-		protected.GET("/courses/:id", handler.GetCourseDetail)
-		protected.PUT("/profile", handler.UpdateProfile)
-		protected.POST("/labs/:id/enroll", handler.StudentEnrollInLab)
-		protected.GET("/certificates", handler.GetUserCertificates)
-	}
+		// ========== STUDENT ROUTES ==========
+		student := api.Group("/student")
+		student.Use(AuthMiddleware("student"))
+		{
+			// Dashboard
+			student.GET("/dashboard", handler.GetStudentDashboard)
 
-	// Instructor & Admin Only
-	instructor := api.Group("/instructor")
-	instructor.Use(AuthMiddleware("instructor", "admin"))
-	{
-		// Course routes
-		instructor.POST("/courses", handler.CreateCourse)
-		instructor.POST("/modules", handler.AddModule)
+			// Profile
+			student.PUT("/profile", handler.UpdateProfile)
 
-		// Lab routes
-		instructor.POST("/labs", handler.CreateLab)
-		instructor.PATCH("/labs/:id/status", handler.UpdateLabStatus)
-		instructor.GET("/labs/:id/ungraded", handler.GetUngradedStudents)
+			// Courses (Browse & Enroll)
+			student.GET("/courses", handler.GetAllCourses)
+			student.GET("/courses/:id", handler.GetCourseDetail)
+			student.POST("/courses/:id/enroll", handler.EnrollCourse)
 
-		instructor.POST("/grades", handler.SubmitGrade)
+			// Enrollments (Jalur Pembelajaran)
+			student.GET("/enrollments", handler.GetMyEnrollments)
+			student.GET("/courses/:id/modules", handler.GetModulesWithProgress)
+			student.POST("/modules/complete", handler.MarkModuleComplete)
+
+			// Assignments
+			student.POST("/assignments/submit", handler.SubmitAssignment)
+
+			// Labs
+			student.GET("/labs", handler.GetAllLabs)
+			student.POST("/labs/:id/enroll", handler.StudentEnrollInLab)
+
+			// Certificates
+			student.GET("/certificates", handler.GetUserCertificates)
+
+			// Reports
+			student.GET("/performance", handler.GetStudentPerformance)
+		}
+
+		// ========== INSTRUCTOR ROUTES ==========
+		instructor := api.Group("/instructor")
+		instructor.Use(AuthMiddleware("instructor", "admin"))
+		{
+			// Dashboard
+			instructor.GET("/dashboard", handler.GetInstructorDashboard)
+
+			// Profile
+			instructor.PUT("/profile", handler.UpdateProfile)
+
+			// Courses Management
+			instructor.POST("/courses", handler.CreateCourse)
+			instructor.GET("/courses", handler.GetAllCourses)
+			instructor.GET("/courses/:id", handler.GetCourseDetail)
+			instructor.POST("/modules", handler.AddModule)
+
+			// Grading
+			instructor.POST("/assignments/grade", handler.GradeAssignment)
+
+			// Labs Management
+			instructor.POST("/labs", handler.CreateLab)
+			instructor.GET("/labs", handler.GetAllLabs)
+			instructor.PATCH("/labs/:id/status", handler.UpdateLabStatus)
+			instructor.POST("/labs/grade", handler.SubmitLabGrade)
+			instructor.GET("/labs/:id/ungraded", handler.GetUngradedStudents)
+
+			// Certificates
+			instructor.GET("/certificates/pending", handler.GetPendingCertificates)
+			instructor.POST("/certificates/:id/approve", handler.ApproveCertificate)
+
+			// Reports
+			instructor.GET("/students/performance", handler.GetAllStudentsPerformance)
+		}
+
+		// ========== ADMIN ROUTES ==========
+		admin := api.Group("/admin")
+		admin.Use(AuthMiddleware("admin"))
+		{
+			// Dashboard
+			admin.GET("/dashboard", handler.GetAdminDashboard)
+
+			// User Management (Pendaftaran)
+			admin.GET("/users", handler.GetAllUsers)
+			admin.POST("/users", handler.CreateUser)
+
+			// Inherits all instructor routes
+			admin.POST("/courses", handler.CreateCourse)
+			admin.GET("/courses", handler.GetAllCourses)
+			admin.POST("/modules", handler.AddModule)
+			admin.POST("/labs", handler.CreateLab)
+			admin.GET("/labs", handler.GetAllLabs)
+			admin.PATCH("/labs/:id/status", handler.UpdateLabStatus)
+			admin.POST("/labs/grade", handler.SubmitLabGrade)
+			admin.GET("/certificates/pending", handler.GetPendingCertificates)
+			admin.POST("/certificates/:id/approve", handler.ApproveCertificate)
+		}
 	}
 
 	return r

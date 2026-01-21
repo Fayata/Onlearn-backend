@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"onlearn-backend/internal/domain"
+	"time"
 
 	"gorm.io/gorm"
 )
 
-// --- User Repo ---
+// ========== USER REPOSITORY ==========
+
 type userRepo struct {
 	db *gorm.DB
 }
@@ -48,6 +50,18 @@ func (r *userRepo) GetByIDs(ctx context.Context, ids []uint) ([]domain.User, err
 	return users, err
 }
 
+func (r *userRepo) GetByRole(ctx context.Context, role domain.Role) ([]domain.User, error) {
+	var users []domain.User
+	err := r.db.WithContext(ctx).Where("role = ?", role).Find(&users).Error
+	return users, err
+}
+
+func (r *userRepo) GetAll(ctx context.Context) ([]domain.User, error) {
+	var users []domain.User
+	err := r.db.WithContext(ctx).Find(&users).Error
+	return users, err
+}
+
 func (r *userRepo) Update(ctx context.Context, user *domain.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }
@@ -56,7 +70,18 @@ func (r *userRepo) UpdateVerified(ctx context.Context, email string) error {
 	return r.db.WithContext(ctx).Model(&domain.User{}).Where("email = ?", email).Update("is_verified", true).Error
 }
 
-// --- Course Repo ---
+func (r *userRepo) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&domain.User{}, id).Error
+}
+
+func (r *userRepo) CountByRole(ctx context.Context, role domain.Role) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.User{}).Where("role = ?", role).Count(&count).Error
+	return count, err
+}
+
+// ========== COURSE REPOSITORY ==========
+
 type courseRepo struct {
 	db *gorm.DB
 }
@@ -88,7 +113,189 @@ func (r *courseRepo) GetByID(ctx context.Context, id uint) (*domain.Course, erro
 	return &course, err
 }
 
-// --- Lab Repo ---
+func (r *courseRepo) GetByInstructorID(ctx context.Context, instructorID uint) ([]domain.Course, error) {
+	var courses []domain.Course
+	err := r.db.WithContext(ctx).Where("instructor_id = ?", instructorID).Find(&courses).Error
+	return courses, err
+}
+
+func (r *courseRepo) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&domain.Course{}, id).Error
+}
+
+func (r *courseRepo) Count(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Course{}).Count(&count).Error
+	return count, err
+}
+
+// ========== ENROLLMENT REPOSITORY ==========
+
+type enrollmentRepo struct {
+	db *gorm.DB
+}
+
+func NewEnrollmentRepository(db *gorm.DB) domain.EnrollmentRepository {
+	return &enrollmentRepo{db}
+}
+
+func (r *enrollmentRepo) Create(ctx context.Context, enrollment *domain.Enrollment) error {
+	return r.db.WithContext(ctx).Create(enrollment).Error
+}
+
+func (r *enrollmentRepo) GetByUserAndCourse(ctx context.Context, userID, courseID uint) (*domain.Enrollment, error) {
+	var enrollment domain.Enrollment
+	err := r.db.WithContext(ctx).Where("user_id = ? AND course_id = ?", userID, courseID).First(&enrollment).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &enrollment, err
+}
+
+func (r *enrollmentRepo) GetByUserID(ctx context.Context, userID uint) ([]domain.Enrollment, error) {
+	var enrollments []domain.Enrollment
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Preload("Course").Find(&enrollments).Error
+	return enrollments, err
+}
+
+func (r *enrollmentRepo) GetByCourseID(ctx context.Context, courseID uint) ([]domain.Enrollment, error) {
+	var enrollments []domain.Enrollment
+	err := r.db.WithContext(ctx).Where("course_id = ?", courseID).Preload("User").Find(&enrollments).Error
+	return enrollments, err
+}
+
+func (r *enrollmentRepo) Update(ctx context.Context, enrollment *domain.Enrollment) error {
+	return r.db.WithContext(ctx).Save(enrollment).Error
+}
+
+func (r *enrollmentRepo) CountByCourseID(ctx context.Context, courseID uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Enrollment{}).Where("course_id = ?", courseID).Count(&count).Error
+	return count, err
+}
+
+func (r *enrollmentRepo) CountByUserID(ctx context.Context, userID uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Enrollment{}).Where("user_id = ?", userID).Count(&count).Error
+	return count, err
+}
+
+// ========== MODULE PROGRESS REPOSITORY ==========
+
+type moduleProgressRepo struct {
+	db *gorm.DB
+}
+
+func NewModuleProgressRepository(db *gorm.DB) domain.ModuleProgressRepository {
+	return &moduleProgressRepo{db}
+}
+
+func (r *moduleProgressRepo) Create(ctx context.Context, progress *domain.ModuleProgress) error {
+	return r.db.WithContext(ctx).Create(progress).Error
+}
+
+func (r *moduleProgressRepo) GetByUserAndModule(ctx context.Context, userID uint, moduleID string) (*domain.ModuleProgress, error) {
+	var progress domain.ModuleProgress
+	err := r.db.WithContext(ctx).Where("user_id = ? AND module_id = ?", userID, moduleID).First(&progress).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &progress, err
+}
+
+func (r *moduleProgressRepo) GetByUserAndCourse(ctx context.Context, userID uint, courseID uint) ([]domain.ModuleProgress, error) {
+	var progress []domain.ModuleProgress
+	err := r.db.WithContext(ctx).Where("user_id = ? AND course_id = ?", userID, courseID).Find(&progress).Error
+	return progress, err
+}
+
+func (r *moduleProgressRepo) Update(ctx context.Context, progress *domain.ModuleProgress) error {
+	return r.db.WithContext(ctx).Save(progress).Error
+}
+
+func (r *moduleProgressRepo) CountCompletedByUserAndCourse(ctx context.Context, userID uint, courseID uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.ModuleProgress{}).
+		Where("user_id = ? AND course_id = ? AND is_complete = ?", userID, courseID, true).
+		Count(&count).Error
+	return count, err
+}
+
+// ========== ASSIGNMENT REPOSITORY ==========
+
+type assignmentRepo struct {
+	db *gorm.DB
+}
+
+func NewAssignmentRepository(db *gorm.DB) domain.AssignmentRepository {
+	return &assignmentRepo{db}
+}
+
+func (r *assignmentRepo) Create(ctx context.Context, assignment *domain.Assignment) error {
+	return r.db.WithContext(ctx).Create(assignment).Error
+}
+
+func (r *assignmentRepo) GetByID(ctx context.Context, id uint) (*domain.Assignment, error) {
+	var assignment domain.Assignment
+	err := r.db.WithContext(ctx).Preload("User").Preload("GradedBy").First(&assignment, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("assignment not found")
+	}
+	return &assignment, err
+}
+
+func (r *assignmentRepo) GetByUserAndModule(ctx context.Context, userID uint, moduleID string) (*domain.Assignment, error) {
+	var assignment domain.Assignment
+	err := r.db.WithContext(ctx).Where("user_id = ? AND module_id = ?", userID, moduleID).First(&assignment).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &assignment, err
+}
+
+func (r *assignmentRepo) GetByCourseID(ctx context.Context, courseID uint) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	err := r.db.WithContext(ctx).Where("course_id = ?", courseID).
+		Preload("User").Preload("GradedBy").
+		Order("submitted_at DESC").
+		Find(&assignments).Error
+	return assignments, err
+}
+
+func (r *assignmentRepo) GetUngradedByCourseID(ctx context.Context, courseID uint) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	err := r.db.WithContext(ctx).Where("course_id = ? AND grade IS NULL", courseID).
+		Preload("User").
+		Order("submitted_at ASC").
+		Find(&assignments).Error
+	return assignments, err
+}
+
+func (r *assignmentRepo) GetRecentSubmissions(ctx context.Context, limit int) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	err := r.db.WithContext(ctx).
+		Preload("User").
+		Order("submitted_at DESC").
+		Limit(limit).
+		Find(&assignments).Error
+	return assignments, err
+}
+
+func (r *assignmentRepo) Update(ctx context.Context, assignment *domain.Assignment) error {
+	return r.db.WithContext(ctx).Save(assignment).Error
+}
+
+func (r *assignmentRepo) CountUngradedByInstructor(ctx context.Context, instructorID uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Assignment{}).
+		Joins("JOIN courses ON assignments.course_id = courses.id").
+		Where("courses.instructor_id = ? AND assignments.grade IS NULL", instructorID).
+		Count(&count).Error
+	return count, err
+}
+
+// ========== LAB REPOSITORY ==========
+
 type labRepo struct {
 	db *gorm.DB
 }
@@ -116,8 +323,28 @@ func (r *labRepo) GetByID(ctx context.Context, id uint) (*domain.Lab, error) {
 
 func (r *labRepo) GetAll(ctx context.Context) ([]domain.Lab, error) {
 	var labs []domain.Lab
-	err := r.db.WithContext(ctx).Find(&labs).Error
+	err := r.db.WithContext(ctx).Order("start_time DESC").Find(&labs).Error
 	return labs, err
+}
+
+func (r *labRepo) GetUpcoming(ctx context.Context) ([]domain.Lab, error) {
+	var labs []domain.Lab
+	now := time.Now()
+	err := r.db.WithContext(ctx).
+		Where("start_time > ? OR status = ?", now, "open").
+		Order("start_time ASC").
+		Find(&labs).Error
+	return labs, err
+}
+
+func (r *labRepo) Delete(ctx context.Context, id uint) error {
+	return r.db.WithContext(ctx).Delete(&domain.Lab{}, id).Error
+}
+
+func (r *labRepo) Count(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Lab{}).Count(&count).Error
+	return count, err
 }
 
 func (r *labRepo) CreateGrade(ctx context.Context, grade *domain.LabGrade) error {
@@ -139,11 +366,20 @@ func (r *labRepo) GetGrade(ctx context.Context, userID, labID uint) (*domain.Lab
 
 func (r *labRepo) GetGradesByLabID(ctx context.Context, labID uint) ([]domain.LabGrade, error) {
 	var grades []domain.LabGrade
-	err := r.db.WithContext(ctx).Where("lab_id = ?", labID).Find(&grades).Error
+	err := r.db.WithContext(ctx).Where("lab_id = ?", labID).Preload("User").Find(&grades).Error
 	return grades, err
 }
 
-// --- Certificate Repo ---
+func (r *labRepo) CountUngradedByLabID(ctx context.Context, labID uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.LabGrade{}).
+		Where("lab_id = ? AND grade = ?", labID, "").
+		Count(&count).Error
+	return count, err
+}
+
+// ========== CERTIFICATE REPOSITORY ==========
+
 type certRepo struct {
 	db *gorm.DB
 }
@@ -158,6 +394,64 @@ func (r *certRepo) Create(ctx context.Context, cert *domain.Certificate) error {
 
 func (r *certRepo) GetByUserID(ctx context.Context, userID uint) ([]domain.Certificate, error) {
 	var certs []domain.Certificate
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Find(&certs).Error
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Preload("Course").
+		Preload("Lab").
+		Order("issue_date DESC").
+		Find(&certs).Error
 	return certs, err
+}
+
+func (r *certRepo) GetByID(ctx context.Context, id uint) (*domain.Certificate, error) {
+	var cert domain.Certificate
+	err := r.db.WithContext(ctx).
+		Preload("User").
+		Preload("Course").
+		Preload("Lab").
+		First(&cert, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("certificate not found")
+	}
+	return &cert, err
+}
+
+func (r *certRepo) GetPending(ctx context.Context) ([]domain.Certificate, error) {
+	var certs []domain.Certificate
+	err := r.db.WithContext(ctx).
+		Where("status = ?", "pending").
+		Preload("User").
+		Preload("Course").
+		Preload("Lab").
+		Order("issue_date DESC").
+		Find(&certs).Error
+	return certs, err
+}
+
+func (r *certRepo) GetRecentByUserID(ctx context.Context, userID uint, limit int) ([]domain.Certificate, error) {
+	var certs []domain.Certificate
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND status = ?", userID, "approved").
+		Preload("Course").
+		Preload("Lab").
+		Order("issue_date DESC").
+		Limit(limit).
+		Find(&certs).Error
+	return certs, err
+}
+
+func (r *certRepo) Update(ctx context.Context, cert *domain.Certificate) error {
+	return r.db.WithContext(ctx).Save(cert).Error
+}
+
+func (r *certRepo) Count(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Certificate{}).Count(&count).Error
+	return count, err
+}
+
+func (r *certRepo) CountByStatus(ctx context.Context, status string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&domain.Certificate{}).Where("status = ?", status).Count(&count).Error
+	return count, err
 }
