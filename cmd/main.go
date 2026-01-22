@@ -118,13 +118,13 @@ func main() {
 	}
 
 	log.Printf("=================================================")
-	log.Printf("🚀 OnLearn Backend Server Starting...")
+	log.Printf(" OnLearn Backend Server Starting...")
 	log.Printf("=================================================")
-	log.Printf("📍 Server running on port %s", port)
-	log.Printf("🌐 Web UI: http://localhost:%s", port)
-	log.Printf("🔌 API: http://localhost:%s/api/v1", port)
+	log.Printf(" Server running on port %s", port)
+	log.Printf(" Web UI: http://localhost:%s", port)
+	log.Printf(" API: http://localhost:%s/api/v1", port)
 	log.Printf("=================================================")
-	log.Printf("📚 Demo Accounts:")
+	log.Printf(" Demo Accounts:")
 	log.Printf("   Student: student@onlearn.com / password123")
 	log.Printf("   Instructor: instructor@onlearn.com / password123")
 	log.Printf("=================================================")

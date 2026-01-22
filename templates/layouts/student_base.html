@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        sidebar: '#1e293b',
+                        'sidebar-hover': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar-collapsed { width: 80px; }
+        .main-expanded { margin-left: 80px; }
+        .progress-ring { transform: rotate(-90deg); transition: stroke-dashoffset 0.5s ease-in-out; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    {{template "sidebar.html" .}}
+    {{template "header.html" .}}
+
+    <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
+        {{template "content" .}}
+    </div>
+
+    <script>
+        let sidebarCollapsed = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            const button = document.getElementById('profileButton');
+            if (dropdown && button && !dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

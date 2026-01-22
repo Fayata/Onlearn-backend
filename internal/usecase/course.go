@@ -76,6 +76,10 @@ func (uc *courseUsecase) GetAllCourses(ctx context.Context) ([]domain.Course, er
 	return uc.courseRepo.GetAll(ctx)
 }
 
+func (uc *courseUsecase) GetInstructorCourses(ctx context.Context, instructorID uint) ([]domain.Course, error) {
+	return uc.courseRepo.GetByInstructorID(ctx, instructorID)
+}
+
 func (uc *courseUsecase) GetCourseDetails(ctx context.Context, courseID uint, userID *uint) (*domain.CourseDetail, error) {
 	course, err := uc.courseRepo.GetByID(ctx, courseID)
 	if err != nil {
@@ -113,6 +117,10 @@ func (uc *courseUsecase) AddModule(ctx context.Context, module *domain.Module) e
 	}
 
 	return uc.moduleRepo.Create(ctx, module)
+}
+
+func (uc *courseUsecase) GetModuleByID(ctx context.Context, moduleID string) (*domain.Module, error) {
+	return uc.moduleRepo.GetByID(ctx, moduleID)
 }
 
 func (uc *courseUsecase) UpdateModule(ctx context.Context, module *domain.Module) error {

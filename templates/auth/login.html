@@ -20,9 +20,7 @@
 </head>
 <body class="bg-gradient-to-br from-primary to-secondary min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-md">
-        <!-- Card -->
         <div class="bg-white rounded-2xl shadow-2xl p-8">
-            <!-- Logo -->
             <div class="text-center mb-8">
                 <div class="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-full mb-4">
                     <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -33,7 +31,6 @@
                 <p class="text-slate-500 mt-2">Masuk ke akun Anda</p>
             </div>
 
-            <!-- Error Alert -->
             <div id="error-alert" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
                 <svg class="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -41,9 +38,7 @@
                 <p class="text-sm text-red-800" id="error-message"></p>
             </div>
 
-            <!-- Form -->
             <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
-                <!-- Email -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-2">
                         Email <span class="text-red-500">*</span>
@@ -58,7 +53,6 @@
                     </div>
                 </div>
 
-                <!-- Password -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-2">
                         Password <span class="text-red-500">*</span>
@@ -73,14 +67,12 @@
                     </div>
                 </div>
 
-                <!-- Forgot Password -->
                 <div class="text-right">
                     <a href="#" class="text-sm text-primary hover:text-blue-700 font-medium">
                         Lupa password?
                     </a>
                 </div>
 
-                <!-- Submit Button -->
                 <button type="submit" id="submitBtn"
                     class="w-full bg-primary text-white rounded-lg px-4 py-3 font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +82,6 @@
                 </button>
             </form>
 
-            <!-- Register Link -->
             <div class="mt-6 text-center">
                 <p class="text-sm text-slate-600">
                     Belum punya akun?
@@ -99,24 +90,8 @@
                     </a>
                 </p>
             </div>
-
-            <!-- Demo Accounts -->
-            <!-- <div class="mt-8 pt-6 border-t border-slate-200">
-                <p class="text-xs text-slate-500 text-center mb-3">Demo Accounts:</p>
-                <div class="space-y-2 text-xs">
-                    <div class="bg-slate-50 rounded p-2">
-                        <p class="font-semibold text-slate-700">Student</p>
-                        <p class="text-slate-600">student@onlearn.com / password123</p>
-                    </div>
-                    <div class="bg-slate-50 rounded p-2">
-                        <p class="font-semibold text-slate-700">Instructor</p>
-                        <p class="text-slate-600">instructor@onlearn.com / password123</p>
-                    </div>
-                </div>
-            </div> -->
         </div>
 
-        <!-- Footer -->
         <p class="text-center text-sm text-white/80 mt-6">
             © 2026 OnLearn. All rights reserved.
         </p>
@@ -145,7 +120,8 @@
             };
             
             try {
-                const response = await fetch('/api/v1/login', {
+                // FIXED: URL changed from /api/v1/login to /api/v1/auth/login
+                const response = await fetch('/api/v1/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -153,6 +129,7 @@
                     body: JSON.stringify(data)
                 });
                 
+                // Parse JSON only if response is actually JSON, but try-catch handles it
                 const result = await response.json();
                 
                 if (response.ok && result.token) {
@@ -170,10 +147,11 @@
                         window.location.href = '/student/dashboard';
                     }
                 } else {
-                    throw new Error(result.error || 'Login failed');
+                    throw new Error(result.error || 'Login gagal');
                 }
             } catch (error) {
-                errorMessage.textContent = error.message;
+                console.error("Login Error:", error); // Debugging info
+                errorMessage.textContent = error.message || "Terjadi kesalahan koneksi";
                 errorAlert.classList.remove('hidden');
                 
                 // Re-enable button

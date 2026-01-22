@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jalur Pembelajaran | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        sidebar: '#1e293b',
+                        'sidebar-hover': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    
+    {{template "sidebar.html" .}}
+    {{template "header.html" .}}
+
+    <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
+        <div style="margin-top: 80px;" class="p-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-book-open text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-gray-800">{{.Stats.Total}}</p>
+                            <p class="text-sm text-gray-500">Total Kursus</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-gray-800">{{.Stats.Completed}}</p>
+                            <p class="text-sm text-gray-500">Selesai</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-spinner text-orange-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-gray-800">{{.Stats.InProgress}}</p>
+                            <p class="text-sm text-gray-500">Sedang Berjalan</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-2xl font-bold text-gray-800">{{.Stats.AvgProgress}}%</p>
+                            <p class="text-sm text-gray-500">Rata-rata Progress</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {{range $index, $enrollment := .Enrollments}}
+                    
+                    {{ $colors := seq 0 3 }}
+                    {{ $idx := mod $index 4 }}
+                    
+                    {{ $bgGradient := "from-blue-500 to-blue-700" }}
+                    {{ $textColor := "text-blue-600" }}
+                    {{ $btnColor := "bg-blue-600 hover:bg-blue-700" }}
+                    {{ $badgeBg := "bg-white/20" }}
+                    {{ $badgeText := "text-white" }}
+
+                    {{ if eq $idx 1 }}
+                        {{ $bgGradient = "from-purple-500 to-purple-700" }}
+                        {{ $textColor = "text-purple-600" }}
+                        {{ $btnColor = "bg-purple-600 hover:bg-purple-700" }}
+                    {{ else if eq $idx 2 }}
+                        {{ $bgGradient = "from-orange-500 to-red-600" }}
+                        {{ $textColor = "text-orange-600" }}
+                        {{ $btnColor = "bg-orange-600 hover:bg-orange-700" }}
+                    {{ else if eq $idx 3 }}
+                        {{ $bgGradient = "from-teal-500 to-teal-700" }}
+                        {{ $textColor = "text-teal-600" }}
+                        {{ $btnColor = "bg-teal-600 hover:bg-teal-700" }}
+                    {{ end }}
+
+                    {{ if eq .Progress 100.0 }}
+                        {{ $bgGradient = "from-green-500 to-green-700" }}
+                        {{ $textColor = "text-green-600" }}
+                        {{ $btnColor = "bg-green-600 hover:bg-green-700" }}
+                        {{ $badgeBg = "bg-white/90" }}
+                        {{ $badgeText = "text-green-700" }}
+                    {{ end }}
+
+                <div class="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden flex flex-col h-full">
+                    <div class="h-48 bg-gradient-to-br {{$bgGradient}} relative">
+                        <div class="absolute top-4 right-4">
+                            <span class="px-3 py-1 {{$badgeBg}} {{$badgeText}} text-xs font-semibold rounded-full flex items-center gap-1 backdrop-blur-sm">
+                                {{if eq .Progress 100.0}}
+                                    <i class="fas fa-check"></i> Selesai
+                                {{else}}
+                                    Sedang Berjalan
+                                {{end}}
+                            </span>
+                        </div>
+                        
+                        <div class="absolute bottom-0 left-0 right-0 p-6">
+                            <h3 class="text-white font-bold text-xl mb-2 line-clamp-2">{{.Course.Title}}</h3>
+                            <p class="text-white/80 text-sm line-clamp-1">{{.Course.Description}}</p>
+                        </div>
+                    </div>
+
+                    <div class="p-6 flex flex-col flex-1">
+                        <div class="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                            <i class="fas fa-user text-gray-400"></i>
+                            <span>{{.Course.Instructor.Name}}</span>
+                        </div>
+                        
+                        <div class="mb-4 flex-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-semibold text-gray-700">Progress</span>
+                                <span class="text-sm font-bold {{$textColor}}">{{printf "%.0f" .Progress}}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="{{$btnColor}} h-2 rounded-full transition-all duration-1000" style="width: {{.Progress}}%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Status pembelajaran Anda</p>
+                        </div>
+
+                        {{if eq .Progress 100.0}}
+                        <button onclick="window.location.href='/student/certificates'" class="w-full {{$btnColor}} text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                            <i class="fas fa-certificate"></i>
+                            Ambil Sertifikat
+                        </button>
+                        {{else}}
+                        <button onclick="window.location.href='/student/courses/{{.CourseID}}'" class="w-full {{$btnColor}} text-white py-2.5 rounded-lg font-semibold transition-colors">
+                            Lanjutkan Belajar
+                        </button>
+                        {{end}}
+                    </div>
+                </div>
+                {{else}}
+                <div class="col-span-3 text-center py-12 bg-white rounded-2xl shadow-sm">
+                    <div class="mb-4 text-gray-300">
+                        <i class="fas fa-book-open text-6xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Belum ada kursus diambil</h3>
+                    <p class="text-gray-500 mb-6">Mulai perjalanan belajar Anda dengan mendaftar kursus baru.</p>
+                    <a href="/student/courses" class="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Browse Kursus
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+    <script>
+        let sidebarCollapsed = false;
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            
+            sidebarCollapsed = !sidebarCollapsed;
+            
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                navTexts.forEach(text => text.style.display = 'none');
+                brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                navTexts.forEach(text => text.style.display = 'inline');
+                brandText.style.display = 'inline';
+            }
+        }
+    </script>
+</body>
+</html>

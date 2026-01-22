@@ -117,6 +117,10 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	// PERBAIKAN: Set Cookie di Server
+	// Name: "token", Value: token, MaxAge: 86400 (24h), Path: "/", Domain: "", Secure: false (localhost), HttpOnly: false
+	c.SetCookie("token", token, 86400, "/", "", false, false)
+
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
@@ -240,6 +244,103 @@ func (h *Handler) CreateCourse(c *gin.Context) {
 	c.JSON(http.StatusCreated, course)
 }
 
+func (h *Handler) UpdateCourse(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	courseID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	// Get existing course to verify ownership
+	existing, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), uint(courseID), nil)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Course not found"})
+		return
+	}
+
+	// Verify instructor owns this course
+	if existing.InstructorID != userID {
+		role, _ := getUserRole(c)
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own courses"})
+			return
+		}
+	}
+
+	var course domain.Course
+	course.ID = uint(courseID)
+	course.Title = c.PostForm("title")
+	course.Description = c.PostForm("description")
+	course.InstructorID = existing.InstructorID // Keep original instructor
+
+	if course.Title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Title is required"})
+		return
+	}
+
+	// Handle thumbnail upload if provided
+	filePath, err := utils.HandleUpload(c, "thumbnail")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload thumbnail: " + err.Error()})
+		return
+	}
+	if filePath != "" {
+		course.Thumbnail = filePath
+	}
+
+	if err := h.CourseUsecase.UpdateCourse(c.Request.Context(), &course); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Course updated successfully", "course": course})
+}
+
+func (h *Handler) DeleteCourse(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	courseID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	// Get existing course to verify ownership
+	existing, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), uint(courseID), nil)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Course not found"})
+		return
+	}
+
+	// Verify instructor owns this course
+	if existing.InstructorID != userID {
+		role, _ := getUserRole(c)
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own courses"})
+			return
+		}
+	}
+
+	if err := h.CourseUsecase.DeleteCourse(c.Request.Context(), uint(courseID)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Course deleted successfully"})
+}
+
 func (h *Handler) GetAllCourses(c *gin.Context) {
 	courses, err := h.CourseUsecase.GetAllCourses(c.Request.Context())
 	if err != nil {
@@ -338,21 +439,36 @@ func (h *Handler) AddModule(c *gin.Context) {
 	module.Title = c.PostForm("title")
 	module.Type = domain.ModuleType(c.PostForm("type"))
 	module.Description = c.PostForm("description")
-	module.QuizLink = c.PostForm("quiz_link")
+	module.QuizLink = c.PostForm("quiz_link") // Exam link (Google Form atau link lainnya)
 	module.Order = order
 
-	if module.Title == "" || module.Type == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Title and type are required"})
+	if module.Title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Title is required"})
 		return
 	}
 
-	filePath, err := utils.HandleUpload(c, "content_url")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload content: " + err.Error()})
+	// Type validation - harus pdf atau ppt
+	if module.Type != "" && module.Type != domain.TypePDF && module.Type != domain.TypePPT {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Type must be 'pdf' or 'ppt'"})
 		return
 	}
-	if filePath != "" {
-		module.ContentURL = filePath
+
+	// Handle file upload untuk PPT atau PDF
+	if module.Type == domain.TypePPT || module.Type == domain.TypePDF {
+		filePath, err := utils.HandleUpload(c, "content_url")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload content: " + err.Error()})
+			return
+		}
+		if filePath != "" {
+			module.ContentURL = filePath
+		}
+	}
+
+	// Jika hanya exam link tanpa file, type bisa kosong atau kita set default
+	if module.QuizLink != "" && module.Type == "" {
+		// Jika hanya ada exam link, kita bisa set type sebagai "exam" atau biarkan kosong
+		// Untuk sekarang, kita akan require type tetap
 	}
 
 	if err := h.CourseUsecase.AddModule(c.Request.Context(), &module); err != nil {
@@ -361,6 +477,131 @@ func (h *Handler) AddModule(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, module)
+}
+
+func (h *Handler) UpdateModule(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	moduleID := c.Param("id")
+	if moduleID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Module ID is required"})
+		return
+	}
+
+	// Get existing module
+	existing, err := h.CourseUsecase.GetModuleByID(c.Request.Context(), moduleID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Module not found"})
+		return
+	}
+
+	// Verify instructor owns the course
+	courseDetail, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), existing.CourseID, nil)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Course not found"})
+		return
+	}
+
+	if courseDetail.InstructorID != userID {
+		role, _ := getUserRole(c)
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You can only update modules in your own courses"})
+			return
+		}
+	}
+
+	var module domain.Module
+	module.ID = moduleID
+	module.CourseID = existing.CourseID
+	module.Title = c.PostForm("title")
+	module.Type = domain.ModuleType(c.PostForm("type"))
+	module.Description = c.PostForm("description")
+	module.QuizLink = c.PostForm("quiz_link")
+
+	orderStr := c.PostForm("order")
+	if orderStr != "" {
+		order, err := strconv.Atoi(orderStr)
+		if err == nil {
+			module.Order = order
+		} else {
+			module.Order = existing.Order
+		}
+	} else {
+		module.Order = existing.Order
+	}
+
+	if module.Title == "" {
+		module.Title = existing.Title
+	}
+	if module.Type == "" {
+		module.Type = existing.Type
+	}
+
+	// Handle content upload if provided
+	filePath, err := utils.HandleUpload(c, "content_url")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload content: " + err.Error()})
+		return
+	}
+	if filePath != "" {
+		module.ContentURL = filePath
+	} else {
+		module.ContentURL = existing.ContentURL
+	}
+
+	if err := h.CourseUsecase.UpdateModule(c.Request.Context(), &module); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Module updated successfully", "module": module})
+}
+
+func (h *Handler) DeleteModule(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	moduleID := c.Param("id")
+	if moduleID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Module ID is required"})
+		return
+	}
+
+	// Get existing module to verify ownership
+	existing, err := h.CourseUsecase.GetModuleByID(c.Request.Context(), moduleID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Module not found"})
+		return
+	}
+
+	// Verify instructor owns the course
+	courseDetail, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), existing.CourseID, nil)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Course not found"})
+		return
+	}
+
+	if courseDetail.InstructorID != userID {
+		role, _ := getUserRole(c)
+		if role != "admin" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete modules in your own courses"})
+			return
+		}
+	}
+
+	if err := h.CourseUsecase.DeleteModule(c.Request.Context(), moduleID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Module deleted successfully"})
 }
 
 func (h *Handler) GetModulesWithProgress(c *gin.Context) {
@@ -506,6 +747,94 @@ func (h *Handler) GetAllLabs(c *gin.Context) {
 		"labs":  labs,
 		"count": len(labs),
 	})
+}
+
+func (h *Handler) GetLabByID(c *gin.Context) {
+	idStr := c.Param("id")
+	labID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lab ID"})
+		return
+	}
+
+	lab, err := h.LabUsecase.GetLabByID(c.Request.Context(), uint(labID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Lab not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, lab)
+}
+
+func (h *Handler) UpdateLab(c *gin.Context) {
+	_, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	labID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lab ID"})
+		return
+	}
+
+	// Get existing lab
+	existing, err := h.LabUsecase.GetLabByID(c.Request.Context(), uint(labID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Lab not found"})
+		return
+	}
+
+	var lab domain.Lab
+	if err := c.ShouldBindJSON(&lab); err != nil {
+		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
+		return
+	}
+
+	lab.ID = uint(labID)
+	
+	// If status not provided, keep existing
+	if lab.Status == "" {
+		lab.Status = existing.Status
+	}
+
+	if err := h.LabUsecase.UpdateLab(c.Request.Context(), &lab); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Lab updated successfully", "lab": lab})
+}
+
+func (h *Handler) DeleteLab(c *gin.Context) {
+	_, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	labID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lab ID"})
+		return
+	}
+
+	// Verify lab exists
+	_, err = h.LabUsecase.GetLabByID(c.Request.Context(), uint(labID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Lab not found"})
+		return
+	}
+
+	if err := h.LabUsecase.DeleteLab(c.Request.Context(), uint(labID)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Lab deleted successfully"})
 }
 
 func (h *Handler) UpdateLabStatus(c *gin.Context) {

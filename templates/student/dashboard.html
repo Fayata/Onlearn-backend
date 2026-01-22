@@ -20,130 +20,74 @@
         }
     </script>
     <style>
-        .sidebar-collapsed {
-            width: 80px;
-        }
-        .main-expanded {
-            margin-left: 80px;
-        }
-        .progress-ring {
-            transform: rotate(-90deg);
-        }
+        .sidebar-collapsed { width: 80px; }
+        .main-expanded { margin-left: 80px; }
+        .progress-ring { transform: rotate(-90deg); transition: stroke-dashoffset 0.5s ease-in-out; }
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-slide-in {
-            animation: slideIn 0.5s ease-out;
-        }
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- Sidebar -->
-    <div id="sidebar" class="fixed left-0 top-0 h-screen bg-sidebar text-white transition-all duration-300 z-50" style="width: 250px;">
-        <!-- Logo & Brand -->
-        <div class="flex items-center justify-between p-6 border-b border-gray-700">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                    <i class="fas fa-graduation-cap text-xl"></i>
-                </div>
-                <span id="brandText" class="text-xl font-bold">ONLEARN</span>
-            </div>
-            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
+    
+    {{template "sidebar.html" .}}
+    {{template "header.html" .}}
 
-        <!-- Navigation -->
-        <nav class="p-4">
-            <a href="#dashboard" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white mb-2">
-                <i class="fas fa-chart-line w-5"></i>
-                <span class="nav-text">Dashboard</span>
-            </a>
-            <a href="#jalur" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-hover mb-2">
-                <i class="fas fa-route w-5"></i>
-                <span class="nav-text">Jalur Pembelajaran</span>
-            </a>
-            <a href="#lab" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-hover mb-2">
-                <i class="fas fa-flask w-5"></i>
-                <span class="nav-text">Lab</span>
-            </a>
-            <a href="#sertifikat" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-hover mb-2">
-                <i class="fas fa-certificate w-5"></i>
-                <span class="nav-text">Sertifikat</span>
-            </a>
-            
-            <div class="mt-6 mb-2 px-4">
-                <p class="text-xs text-gray-400 uppercase nav-text">Kursus</p>
-            </div>
-            <a href="#kursus" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-sidebar-hover mb-2">
-                <i class="fas fa-book w-5"></i>
-                <span class="nav-text">Browse Kursus</span>
-            </a>
-        </nav>
-
-        <!-- Profile -->
-        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
-            <div class="flex items-center gap-3 cursor-pointer hover:bg-sidebar-hover rounded-lg p-2">
-                <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="nav-text flex-1">
-                    <p class="font-semibold text-sm" id="userName">{{.User.Name}}</p>
-                    <p class="text-xs text-gray-400">{{.User.Role}}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
     <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
-        <!-- Top Bar -->
-        <div class="bg-white shadow-sm border-b border-gray-200 px-8 py-4 flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
-            <div class="flex items-center gap-4">
-                <button class="relative p-2 text-gray-600 hover:text-gray-900">
-                    <i class="fas fa-bell text-xl"></i>
-                    <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
-                <div class="flex items-center gap-2 cursor-pointer">
-                    <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white">
-                        <i class="fas fa-user"></i>
+        <div style="margin-top: 80px;" class="p-8">
+            <div class="bg-gradient-to-r from-slate-700 to-slate-900 rounded-2xl p-8 text-white mb-8 shadow-lg animate-slide-in">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-bold mb-2">Selamat Datang, {{.User.Name}}! 👋</h2>
+                        <p class="text-slate-200 max-w-2xl">Siap untuk melanjutkan pembelajaran hari ini? Pantau progres kursus, selesaikan lab, dan raih sertifikat kompetensi barumu.</p>
+                        <div class="mt-6 flex gap-3">
+                            <a href="/student/courses" class="px-5 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg font-medium transition-colors">
+                                Lanjut Belajar
+                            </a>
+                            <a href="/student/browse" class="px-5 py-2 bg-primary hover:bg-blue-600 rounded-lg font-medium transition-colors shadow-lg shadow-blue-900/50">
+                                Cari Kursus Baru
+                            </a>
+                        </div>
                     </div>
-                    <span class="font-semibold text-gray-700">{{.User.Name}}</span>
-                    <i class="fas fa-chevron-down text-gray-500 text-sm"></i>
+                    <div class="hidden md:block text-6xl opacity-20 transform rotate-12">
+                        <i class="fas fa-rocket"></i>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Dashboard Content -->
-        <div class="p-8">
-            <!-- Ringkasan Section -->
             <div class="mb-8">
                 <h2 class="text-xl font-bold text-gray-800 mb-6">Ringkasan</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Card 1: Leaderboard Rank -->
+                    
                     <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow animate-slide-in">
                         <div class="flex flex-col items-center">
-                            <div class="w-24 h-24 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center mb-4">
-                                <i class="fas fa-trophy text-white text-3xl"></i>
+                            <div class="w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-book-open text-white text-3xl"></i>
                             </div>
-                            <h3 class="text-3xl font-bold text-gray-800 mb-2">Peringkat {{.LeaderboardRank}}</h3>
-                            <p class="text-gray-500 text-sm mb-4">di leaderboard</p>
-                            <a href="#" class="text-primary hover:text-blue-700 text-sm font-semibold">
-                                Lihat selengkapnya &gt;
+                            <h3 class="text-3xl font-bold text-gray-800 mb-2">{{.InProgressCourses}} Kursus</h3>
+                            <p class="text-gray-500 text-sm mb-4">sedang dipelajari saat ini</p>
+                            <a href="/student/courses" class="text-primary hover:text-blue-700 text-sm font-semibold">
+                                Lanjutkan Belajar >
                             </a>
                         </div>
                     </div>
 
-                    <!-- Card 2: Labs & Exams -->
                     <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow animate-slide-in" style="animation-delay: 0.1s">
                         <div class="flex flex-col items-center">
                             <div class="relative w-32 h-32 mb-4">
                                 <svg class="w-full h-full" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+                                    {{ $circumference := 283.0 }}
+                                    {{ $progress := 0.0 }}
+                                    {{ if gt .AssignedLabs 0 }}
+                                        {{ $progress = div .CompletedLabs .AssignedLabs }}
+                                    {{ end }}
+                                    {{ $offset := mul $circumference (sub 1.0 $progress) }}
+                                    
                                     <circle cx="50" cy="50" r="45" fill="none" stroke="#10b981" stroke-width="8" 
-                                            stroke-dasharray="283" stroke-dashoffset="{{.CompletedLabs | div .AssignedLabs | mul 283 | sub 283}}"
+                                            stroke-dasharray="{{$circumference}}" stroke-dashoffset="{{$offset}}" 
                                             class="progress-ring" stroke-linecap="round"/>
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
@@ -152,29 +96,28 @@
                             </div>
                             <h3 class="text-3xl font-bold text-gray-800 mb-2">{{.CompletedLabs}} Lab & Exam</h3>
                             <p class="text-gray-500 text-sm mb-4">selesai dari {{.AssignedLabs}} yang ditugaskan</p>
-                            <a href="#" class="text-primary hover:text-blue-700 text-sm font-semibold">
-                                Lihat semua &gt;
+                            <a href="/student/labs" class="text-primary hover:text-blue-700 text-sm font-semibold">
+                                Lihat semua >
                             </a>
                         </div>
                     </div>
 
-                    <!-- Card 3: Weekly Goals -->
                     <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow animate-slide-in" style="animation-delay: 0.2s">
                         <div class="flex flex-col items-center">
                             <div class="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mb-4">
-                                <i class="fas fa-check-circle text-white text-3xl"></i>
+                                <i class="fas fa-certificate text-white text-3xl"></i>
                             </div>
-                            <h3 class="text-3xl font-bold text-gray-800 mb-2">{{.WeeklyGoalProgress}}%</h3>
-                            <p class="text-gray-500 text-sm mb-4">mencapai tujuan mingguan Anda</p>
-                            <a href="#" class="text-primary hover:text-blue-700 text-sm font-semibold">
-                                Lihat selengkapnya &gt;
+                            <h3 class="text-3xl font-bold text-gray-800 mb-2">{{.TotalCertificates}} Sertifikat</h3>
+                            <p class="text-gray-500 text-sm mb-4">kompetensi telah diraih</p>
+                            <a href="/student/certificates" class="text-primary hover:text-blue-700 text-sm font-semibold">
+                                Lihat Koleksi >
                             </a>
                         </div>
                     </div>
+
                 </div>
             </div>
 
-            <!-- Recent Activity -->
             <div class="mb-8">
                 <h2 class="text-xl font-bold text-gray-800 mb-6">Aktivitas Terbaru</h2>
                 <div class="bg-white rounded-2xl shadow-sm p-6">
@@ -191,125 +134,33 @@
                             </div>
                         </div>
                         {{else}}
-                        <p class="text-gray-500">Belum ada aktivitas terbaru.</p>
+                        <div class="p-4 text-center text-gray-500">
+                            Belum ada aktivitas terbaru.
+                        </div>
                         {{end}}
                     </div>
                 </div>
             </div>
-
-            <!-- Upcoming Labs -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-bold text-gray-800">Lab Mendatang</h2>
-                    <a href="#" class="text-primary hover:text-blue-700 text-sm font-semibold">Lihat Semua</a>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {{range .UpcomingLabsSorted | limit 3}}
-                    <div class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md transition-shadow border-t-4 
-                        {{if eq .Status "Open"}}border-green-500{{else if eq .Status "Scheduled"}}border-blue-500{{else}}border-gray-400{{end}}">
-                        <div class="flex items-start justify-between mb-4">
-                            <div class="flex-1">
-                                <h3 class="font-bold text-gray-800 mb-2">{{.Title}}</h3>
-                                <p class="text-sm text-gray-500">{{.Description}}</p>
-                            </div>
-                            <span class="px-3 py-1 text-xs font-semibold rounded-full
-                                {{if eq .Status "Open"}}bg-green-100 text-green-700{{else if eq .Status "Scheduled"}}bg-blue-100 text-blue-700{{else}}bg-gray-100 text-gray-700{{end}}">
-                                {{.Status}}
-                            </span>
-                        </div>
-                        <div class="space-y-2 mb-4">
-                            <div class="flex items-center gap-2 text-sm text-gray-600">
-                                <i class="fas fa-calendar text-gray-400"></i>
-                                <span>{{.StartTime.Format "2 Jan 2006"}}</span>
-                            </div>
-                            <div class="flex items-center gap-2 text-sm text-gray-600">
-                                <i class="fas fa-clock text-gray-400"></i>
-                                <span>{{.StartTime.Format "15:04"}} - {{.EndTime.Format "15:04 WIB"}}</span>
-                            </div>
-                        </div>
-                        <div class="bg-gray-50 rounded-lg p-3 mb-4">
-                            {{if eq .Status "Open"}}
-                            <div class="flex items-center gap-2 text-sm text-green-700">
-                                <i class="fas fa-check-circle"></i>
-                                <span class="font-semibold">Lab sedang berlangsung</span>
-                            </div>
-                            {{else if eq .Status "Scheduled"}}
-                             <div class="flex items-center gap-2 text-sm text-blue-700">
-                                <i class="fas fa-hourglass-half"></i>
-                                <span class="font-semibold">Mulai dalam: {{.StartTime | countdown}}</span>
-                            </div>
-                            {{else}}
-                             <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-600">Lab telah selesai.</span>
-                            </div>
-                            {{end}}
-                        </div>
-                         <button class="w-full py-2 rounded-lg font-semibold transition-colors
-                            {{if eq .Status "Open"}}bg-green-600 text-white hover:bg-green-700
-                            {{else if eq .Status "Scheduled"}}bg-primary text-white hover:bg-blue-700
-                            {{else}}bg-gray-200 text-gray-700 hover:bg-gray-300{{end}}">
-                            {{if eq .Status "Open"}}Mulai Lab{{else if eq .Status "Scheduled"}}Lihat Detail{{else}}Lihat Hasil{{end}}
-                        </button>
-                    </div>
-                    {{else}}
-                    <p class="text-gray-500">Tidak ada lab yang akan datang.</p>
-                    {{end}}
-                </div>
-            </div>
-
-            <!-- Sertifikat Terbaru -->
-            <div>
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-bold text-gray-800">Sertifikat Terbaru</h2>
-                    <a href="#" class="text-primary hover:text-blue-700 text-sm font-semibold">Lihat Semua</a>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {{range .RecentCertificates}}
-                    <div class="bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl p-6 text-white hover:shadow-xl transition-shadow cursor-pointer">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                                <i class="fas fa-trophy text-2xl"></i>
-                            </div>
-                            <div>
-                                <p class="text-sm opacity-90">Sertifikat Penyelesaian</p>
-                                <p class="font-bold">{{.Title}}</p>
-                            </div>
-                        </div>
-                        <p class="text-sm opacity-75 mb-4">Diterbitkan pada {{.IssueDate.Format "2 Jan 2006"}}</p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm font-semibold">+{{if .CourseID}}100{{else}}150{{end}} poin</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </div>
-                    </div>
-                    {{else}}
-                    <p class="text-gray-500">Anda belum memiliki sertifikat.</p>
-                    {{end}}
-                </div>
-            </div>
         </div>
     </div>
-
     <script>
         let sidebarCollapsed = false;
-
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const navTexts = document.querySelectorAll('.nav-text');
             const brandText = document.getElementById('brandText');
-            
             sidebarCollapsed = !sidebarCollapsed;
-            
             if (sidebarCollapsed) {
                 sidebar.style.width = '80px';
                 mainContent.style.marginLeft = '80px';
-                navTexts.forEach(text => text.style.display = 'none');
-                brandText.style.display = 'none';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
             } else {
                 sidebar.style.width = '250px';
                 mainContent.style.marginLeft = '250px';
-                navTexts.forEach(text => text.style.display = 'inline');
-                brandText.style.display = 'inline';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
             }
         }
     </script>

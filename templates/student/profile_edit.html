@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        sidebar: '#1e293b',
+                        'sidebar-hover': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    {{template "sidebar.html" .}}
+    {{template "header.html" .}}
+
+    <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
+        <div style="margin-top: 80px;" class="p-8">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                    <div class="bg-primary text-white px-6 py-4">
+                        <h2 class="text-xl font-semibold">Edit Profile</h2>
+                    </div>
+                    <div class="p-6">
+                        {{if .error}}
+                        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                            {{.error}}
+                        </div>
+                        {{end}}
+                        
+                        <form method="POST" action="/student/profile/edit" enctype="multipart/form-data" class="space-y-6">
+                            <!-- Profile Picture -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Profile Picture</label>
+                                <div class="flex items-center gap-4">
+                                    <div class="w-20 h-20 bg-purple-500 rounded-full flex items-center justify-center text-white text-2xl overflow-hidden">
+                                        {{if .User.ProfilePicture}}
+                                            <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover" id="profilePreview">
+                                        {{else}}
+                                            <i class="fas fa-user" id="profileIcon"></i>
+                                        {{end}}
+                                    </div>
+                                    <div>
+                                        <input type="file" name="profile_picture" id="profile_picture" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-blue-600" onchange="previewImage(this)">
+                                        <p class="mt-1 text-xs text-gray-500">PNG, JPG up to 2MB</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Name -->
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                                <input type="text" id="name" name="name" value="{{.User.Name}}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                            </div>
+
+                            <!-- Email (Read-only) -->
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                <input type="email" id="email" value="{{.User.Email}}" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                                <p class="mt-1 text-xs text-gray-500">Email cannot be changed</p>
+                            </div>
+
+                            <!-- Password -->
+                            <div>
+                                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                                <input type="password" id="password" name="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                                <p class="mt-1 text-xs text-gray-500">Leave blank to keep current password</p>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="flex gap-4 pt-4">
+                                <button type="submit" class="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors">
+                                    Save Changes
+                                </button>
+                                <a href="/student/profile" class="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors text-center">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sidebarCollapsed = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
+            }
+        }
+
+        function toggleProfileDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('profilePreview');
+                    const icon = document.getElementById('profileIcon');
+                    if (preview) {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                    }
+                    if (icon) {
+                        icon.style.display = 'none';
+                    }
+                    if (!preview) {
+                        const container = input.closest('.flex').querySelector('.w-20');
+                        const img = document.createElement('img');
+                        img.id = 'profilePreview';
+                        img.src = e.target.result;
+                        img.className = 'w-full h-full object-cover';
+                        img.style.display = 'block';
+                        container.appendChild(img);
+                        if (icon) icon.style.display = 'none';
+                    }
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            const button = document.getElementById('profileButton');
+            if (dropdown && button && !dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

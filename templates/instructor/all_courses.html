@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semua Kursus | Instructor | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        sidebar: '#1e293b',
+                        'sidebar-hover': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed left-0 top-0 h-screen bg-slate-800 text-white transition-all duration-300 overflow-y-auto z-50" style="width: 250px;">
+        <div class="flex items-center justify-between p-6 border-b border-gray-700">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-graduation-cap text-xl"></i>
+                </div>
+                <span id="brandText" class="text-xl font-bold">ONLEARN</span>
+            </div>
+        </div>
+
+        <nav class="p-4">
+            <a href="/instructor/dashboard" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 mb-2">
+                <i class="fas fa-chart-line w-5"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="/instructor/courses" class="flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-600 text-white mb-2">
+                <i class="fas fa-book w-5"></i>
+                <span class="nav-text">Semua Kursus</span>
+            </a>
+            <a href="/instructor/labs" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 mb-2">
+                <i class="fas fa-flask w-5"></i>
+                <span class="nav-text">Lab</span>
+            </a>
+            <a href="/instructor/certificates" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 mb-2">
+                <i class="fas fa-certificate w-5"></i>
+                <span class="nav-text">Sertifikat</span>
+            </a>
+            <a href="/instructor/students" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-700 mb-2">
+                <i class="fas fa-users w-5"></i>
+                <span class="nav-text">Daftar Student</span>
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
+            <div class="flex items-center gap-3 cursor-pointer hover:bg-slate-700 rounded-lg p-2">
+                <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden">
+                    {{if .User.ProfilePicture}}
+                        <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
+                    {{else}}
+                        <i class="fas fa-user"></i>
+                    {{end}}
+                </div>
+                <div class="nav-text flex-1 overflow-hidden">
+                    <p class="font-semibold text-sm truncate">{{.User.Name}}</p>
+                    <p class="text-xs text-gray-400 capitalize">Instructor</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
+        <!-- Top Bar -->
+        <div class="bg-white shadow-sm border-b px-8 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Semua Kursus</h1>
+                <p class="text-sm text-gray-500">Kelola kursus dan modul Anda</p>
+            </div>
+            <button onclick="openCreateCourseModal()" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <i class="fas fa-plus"></i>
+                Buat Kursus Baru
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {{range $index, $course := .Courses}}
+                {{ $idx := mod $index 4 }}
+                {{ $bgGradient := "from-blue-500 to-blue-700" }}
+                {{ $textColor := "text-blue-600" }}
+                {{ $btnColor := "bg-blue-600 hover:bg-blue-700" }}
+
+                {{ if eq $idx 1 }}
+                    {{ $bgGradient = "from-purple-500 to-purple-700" }}
+                    {{ $textColor = "text-purple-600" }}
+                    {{ $btnColor = "bg-purple-600 hover:bg-purple-700" }}
+                {{ else if eq $idx 2 }}
+                    {{ $bgGradient = "from-orange-500 to-red-600" }}
+                    {{ $textColor = "text-orange-600" }}
+                    {{ $btnColor = "bg-orange-600 hover:bg-orange-700" }}
+                {{ else if eq $idx 3 }}
+                    {{ $bgGradient = "from-teal-500 to-teal-700" }}
+                    {{ $textColor = "text-teal-600" }}
+                    {{ $btnColor = "bg-teal-600 hover:bg-teal-700" }}
+                {{ end }}
+
+                <div class="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col h-full">
+                    <div class="h-48 bg-gradient-to-br {{$bgGradient}} relative">
+                        {{if .Thumbnail}}
+                            <img src="{{.Thumbnail}}" alt="{{.Title}}" class="w-full h-full object-cover">
+                        {{end}}
+                        <div class="absolute top-4 right-4 flex gap-2">
+                            <button onclick="openEditCourseModal({{.ID}})" class="p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="deleteCourse({{.ID}})" class="p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-6 flex flex-col flex-1">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2 line-clamp-2">{{.Title}}</h3>
+                        <p class="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">{{.Description}}</p>
+                        
+                        <div class="flex gap-2 mt-auto">
+                            <button onclick="viewCourseDetail({{.ID}})" class="flex-1 px-4 py-2.5 {{$btnColor}} text-white rounded-lg font-semibold transition-colors">
+                                Kelola
+                            </button>
+                            <button onclick="openAddModuleModal({{.ID}})" class="px-4 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {{else}}
+                <div class="col-span-3 text-center py-12 bg-white rounded-2xl shadow-sm">
+                    <div class="mb-4 text-gray-300">
+                        <i class="fas fa-book-open text-6xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Belum ada kursus</h3>
+                    <p class="text-gray-500 mb-6">Mulai dengan membuat kursus baru.</p>
+                    <button onclick="openCreateCourseModal()" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Buat Kursus Baru
+                    </button>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Course Modal -->
+    <div id="createCourseModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-gray-800">Buat Kursus Baru</h3>
+                    <button onclick="closeCreateCourseModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="createCourseForm" onsubmit="createCourse(event)" enctype="multipart/form-data" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Judul Kursus *</label>
+                    <input type="text" name="title" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Masukkan judul kursus">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                    <textarea name="description" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" placeholder="Deskripsi kursus..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Thumbnail</label>
+                    <input type="file" name="thumbnail" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeCreateCourseModal()" class="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Buat Kursus
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Module Modal -->
+    <div id="addModuleModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-gray-800">Tambah Modul</h3>
+                    <button onclick="closeAddModuleModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="addModuleForm" onsubmit="addModule(event)" enctype="multipart/form-data" class="p-6 space-y-4">
+                <input type="hidden" id="moduleCourseId" name="course_id">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Judul Modul *</label>
+                    <input type="text" name="title" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Masukkan judul modul">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Tipe Modul *</label>
+                    <select name="type" id="moduleType" required onchange="toggleModuleFields()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Pilih Tipe</option>
+                        <option value="ppt">PPT (PowerPoint)</option>
+                        <option value="pdf">PDF</option>
+                    </select>
+                </div>
+
+                <div id="fileUploadField" class="hidden">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Upload File (PPT/PDF) *</label>
+                    <input type="file" name="content_url" id="moduleFile" accept=".ppt,.pptx,.pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Link Quiz/Exam (Opsional)</label>
+                    <input type="url" name="quiz_link" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="https://forms.google.com/...">
+                    <p class="text-xs text-gray-500 mt-1">Link Google Form atau exam lainnya</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                    <textarea name="description" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" placeholder="Deskripsi modul..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Urutan</label>
+                    <input type="number" name="order" min="1" value="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeAddModuleModal()" class="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Tambah Modul
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let sidebarCollapsed = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
+            }
+        }
+
+        function openCreateCourseModal() {
+            document.getElementById('createCourseModal').classList.remove('hidden');
+        }
+
+        function closeCreateCourseModal() {
+            document.getElementById('createCourseModal').classList.add('hidden');
+            document.getElementById('createCourseForm').reset();
+        }
+
+        async function createCourse(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const token = getCookie('token');
+                const response = await fetch('/api/v1/instructor/courses', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    alert('Kursus berhasil dibuat!');
+                    closeCreateCourseModal();
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Gagal membuat kursus: ' + (error.error || 'Terjadi kesalahan'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan koneksi');
+            }
+        }
+
+        function openAddModuleModal(courseId) {
+            document.getElementById('moduleCourseId').value = courseId;
+            document.getElementById('addModuleModal').classList.remove('hidden');
+        }
+
+        function closeAddModuleModal() {
+            document.getElementById('addModuleModal').classList.add('hidden');
+            document.getElementById('addModuleForm').reset();
+            document.getElementById('fileUploadField').classList.add('hidden');
+        }
+
+        function toggleModuleFields() {
+            const type = document.getElementById('moduleType').value;
+            const fileField = document.getElementById('fileUploadField');
+            const fileInput = document.getElementById('moduleFile');
+            
+            if (type === 'ppt' || type === 'pdf') {
+                fileField.classList.remove('hidden');
+                fileInput.required = true;
+            } else {
+                fileField.classList.add('hidden');
+                fileInput.required = false;
+            }
+        }
+
+        async function addModule(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            
+            try {
+                const token = getCookie('token');
+                const response = await fetch('/api/v1/instructor/modules', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    alert('Modul berhasil ditambahkan!');
+                    closeAddModuleModal();
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Gagal menambahkan modul: ' + (error.error || 'Terjadi kesalahan'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan koneksi');
+            }
+        }
+
+        function viewCourseDetail(courseId) {
+            window.location.href = `/instructor/courses/${courseId}`;
+        }
+
+        async function deleteCourse(courseId) {
+            if (!confirm('Yakin ingin menghapus kursus ini? Semua modul dan data terkait akan dihapus.')) {
+                return;
+            }
+
+            try {
+                const token = getCookie('token');
+                const response = await fetch(`/api/v1/instructor/courses/${courseId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    alert('Kursus berhasil dihapus!');
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Gagal menghapus kursus: ' + (error.error || 'Terjadi kesalahan'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan koneksi');
+            }
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+    </script>
+</body>
+</html>

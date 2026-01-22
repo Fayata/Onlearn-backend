@@ -84,7 +84,13 @@ func InitRouter(handler *Handler) *gin.Engine {
 			instructor.POST("/courses", handler.CreateCourse)
 			instructor.GET("/courses", handler.GetAllCourses)
 			instructor.GET("/courses/:id", handler.GetCourseDetail)
+			instructor.PUT("/courses/:id", handler.UpdateCourse)
+			instructor.DELETE("/courses/:id", handler.DeleteCourse)
+			
+			// Modules Management
 			instructor.POST("/modules", handler.AddModule)
+			instructor.PUT("/modules/:id", handler.UpdateModule)
+			instructor.DELETE("/modules/:id", handler.DeleteModule)
 
 			// Grading
 			instructor.POST("/assignments/grade", handler.GradeAssignment)
@@ -92,7 +98,10 @@ func InitRouter(handler *Handler) *gin.Engine {
 			// Labs Management
 			instructor.POST("/labs", handler.CreateLab)
 			instructor.GET("/labs", handler.GetAllLabs)
+			instructor.GET("/labs/:id", handler.GetLabByID)
+			instructor.PUT("/labs/:id", handler.UpdateLab)
 			instructor.PATCH("/labs/:id/status", handler.UpdateLabStatus)
+			instructor.DELETE("/labs/:id", handler.DeleteLab)
 			instructor.POST("/labs/grade", handler.SubmitLabGrade)
 			instructor.GET("/labs/:id/ungraded", handler.GetUngradedStudents)
 
@@ -118,11 +127,20 @@ func InitRouter(handler *Handler) *gin.Engine {
 			// Inherits all instructor routes
 			admin.POST("/courses", handler.CreateCourse)
 			admin.GET("/courses", handler.GetAllCourses)
+			admin.GET("/courses/:id", handler.GetCourseDetail)
+			admin.PUT("/courses/:id", handler.UpdateCourse)
+			admin.DELETE("/courses/:id", handler.DeleteCourse)
 			admin.POST("/modules", handler.AddModule)
+			admin.PUT("/modules/:id", handler.UpdateModule)
+			admin.DELETE("/modules/:id", handler.DeleteModule)
 			admin.POST("/labs", handler.CreateLab)
 			admin.GET("/labs", handler.GetAllLabs)
+			admin.GET("/labs/:id", handler.GetLabByID)
+			admin.PUT("/labs/:id", handler.UpdateLab)
 			admin.PATCH("/labs/:id/status", handler.UpdateLabStatus)
+			admin.DELETE("/labs/:id", handler.DeleteLab)
 			admin.POST("/labs/grade", handler.SubmitLabGrade)
+			admin.GET("/labs/:id/ungraded", handler.GetUngradedStudents)
 			admin.GET("/certificates/pending", handler.GetPendingCertificates)
 			admin.POST("/certificates/:id/approve", handler.ApproveCertificate)
 		}

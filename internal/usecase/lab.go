@@ -187,6 +187,10 @@ func (uc *labUsecase) GetUngradedStudents(ctx context.Context, labID uint) ([]do
 	return uc.userRepo.GetByIDs(ctx, ungradedUserIDs)
 }
 
+func (uc *labUsecase) GetUngradedCountByLabID(ctx context.Context, labID uint) (int64, error) {
+	return uc.labRepo.CountUngradedByLabID(ctx, labID)
+}
+
 func (uc *labUsecase) GetLabsWithUngradedCount(ctx context.Context) ([]domain.LabWithUngradedCount, error) {
 	labs, err := uc.labRepo.GetAll(ctx)
 	if err != nil {
@@ -204,4 +208,21 @@ func (uc *labUsecase) GetLabsWithUngradedCount(ctx context.Context) ([]domain.La
 	}
 
 	return result, nil
+}
+
+func (uc *labUsecase) GetCompletedLabsByUserID(ctx context.Context, userID uint) ([]domain.LabGrade, error) {
+	grades, err := uc.labRepo.GetGradesByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter only completed labs (those with grade filled)
+	var completed []domain.LabGrade
+	for _, grade := range grades {
+		if grade.Grade != "" {
+			completed = append(completed, grade)
+		}
+	}
+
+	return completed, nil
 }

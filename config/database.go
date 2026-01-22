@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"onlearn-backend/internal/domain"
+	"os"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -67,6 +67,9 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.Enrollment{},
 		&domain.LabGrade{},
 		&domain.Certificate{},
+		// TAMBAHAN: Daftarkan tabel yang hilang
+		&domain.ModuleProgress{},
+		&domain.Assignment{},
 	)
 	if err != nil {
 		return err

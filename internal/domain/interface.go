@@ -103,6 +103,7 @@ type AuthUsecase interface {
 	UpdateUser(ctx context.Context, user *User) error
 	VerifyEmail(ctx context.Context, email string, token string) error
 	ForgotPassword(ctx context.Context, email string) error
+	GetUserByID(ctx context.Context, id uint) (*User, error)
 }
 
 type UserUsecase interface {
@@ -119,8 +120,10 @@ type CourseUsecase interface {
 	AddModule(ctx context.Context, module *Module) error
 	UpdateModule(ctx context.Context, module *Module) error
 	DeleteModule(ctx context.Context, moduleID string) error
+	GetModuleByID(ctx context.Context, moduleID string) (*Module, error)
 	GetCourseDetails(ctx context.Context, courseID uint, userID *uint) (*CourseDetail, error)
 	GetAllCourses(ctx context.Context) ([]Course, error)
+	GetInstructorCourses(ctx context.Context, instructorID uint) ([]Course, error)
 	UpdateCourse(ctx context.Context, course *Course) error
 	DeleteCourse(ctx context.Context, id uint) error
 
@@ -152,7 +155,9 @@ type LabUsecase interface {
 	StudentEnroll(ctx context.Context, userID, labID uint) error
 	SubmitGrade(ctx context.Context, instructorID, userID, labID uint, grade string, feedback string) error
 	GetUngradedStudents(ctx context.Context, labID uint) ([]User, error)
+	GetUngradedCountByLabID(ctx context.Context, labID uint) (int64, error)
 	GetLabsWithUngradedCount(ctx context.Context) ([]LabWithUngradedCount, error)
+	GetCompletedLabsByUserID(ctx context.Context, userID uint) ([]LabGrade, error)
 }
 
 type CertificateUsecase interface {

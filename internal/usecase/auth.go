@@ -90,3 +90,7 @@ func (uc *authUsecase) ForgotPassword(ctx context.Context, email string) error {
 	go utils.SendEmail(email, "Password Reset Request", "Here is your password reset link: FAKE-LINK")
 	return nil
 }
+
+func (uc *authUsecase) GetUserByID(ctx context.Context, id uint) (*domain.User, error) {
+	return uc.userRepo.GetByID(ctx, id)
+}

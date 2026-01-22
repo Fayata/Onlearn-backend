@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        sidebar: '#1e293b',
+                        'sidebar-hover': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+    {{template "sidebar.html" .}}
+    {{template "header.html" .}}
+
+    <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
+        <div style="margin-top: 80px;" class="p-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- User Information Card -->
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="bg-primary text-white px-6 py-3 flex items-center justify-between">
+                            <span class="font-semibold">User</span>
+                            <a href="/student/profile/edit" class="text-white hover:text-blue-200 transition-colors">
+                                <i class="fas fa-edit"></i> Edit user
+                            </a>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex flex-col items-center mb-6">
+                                <div class="w-24 h-24 bg-purple-500 rounded-full flex items-center justify-center text-white text-4xl mb-4 overflow-hidden">
+                                    {{if .User.ProfilePicture}}
+                                        <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
+                                    {{else}}
+                                        <i class="fas fa-user"></i>
+                                    {{end}}
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                                    <span class="text-gray-600 font-medium">Name:</span>
+                                    <span class="text-gray-800 font-semibold">{{.User.Name}}</span>
+                                </div>
+                                <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+                                    <span class="text-gray-600 font-medium">Email:</span>
+                                    <span class="text-gray-800 font-semibold">{{.User.Email}}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-600 font-medium">Last login:</span>
+                                    <span class="text-gray-800 font-semibold">{{if .User.UpdatedAt}}{{.User.UpdatedAt | timeSince}}{{else}}Never{{end}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Details Card -->
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="bg-blue-50 text-gray-800 px-6 py-3">
+                            <span class="font-semibold">Profile</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="mb-6">
+                                <span class="text-gray-600 font-medium">Profile Role:</span>
+                                <span class="ml-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold capitalize">{{.User.Role}}</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800 mb-4">Learning Paths Assigned</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full">
+                                        <thead>
+                                            <tr class="border-b border-gray-200">
+                                                <th class="text-left py-2 px-3 text-sm font-semibold text-gray-700">Path</th>
+                                                <th class="text-left py-2 px-3 text-sm font-semibold text-gray-700">Started</th>
+                                                <th class="text-left py-2 px-3 text-sm font-semibold text-gray-700">Completion</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {{range .Enrollments}}
+                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                <td class="py-3 px-3 text-sm text-gray-800">{{.Course.Title}}</td>
+                                                <td class="py-3 px-3 text-sm text-gray-600">{{.CreatedAt | date}}</td>
+                                                <td class="py-3 px-3 text-sm">
+                                                    {{if eq .Progress 100.0}}
+                                                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">Completed</span>
+                                                    {{else if gt .Progress 0}}
+                                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-semibold">In Progress</span>
+                                                    {{else}}
+                                                        <span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-semibold">Not Started</span>
+                                                    {{end}}
+                                                </td>
+                                            </tr>
+                                            {{else}}
+                                            <tr>
+                                                <td colspan="3" class="py-8 text-center text-gray-500 text-sm">No learning paths assigned yet</td>
+                                            </tr>
+                                            {{end}}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Learning Track Results Card -->
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="bg-blue-50 text-gray-800 px-6 py-3">
+                            <span class="font-semibold">Learning Track Results</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                {{range .Enrollments}}
+                                <div>
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-gray-700">{{.Course.Title}}</span>
+                                        <span class="text-xs text-gray-500">{{printf "%.0f" .Progress}}%</span>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        {{$total := 5}}
+                                        {{$completed := div (mul .Progress 5) 100}}
+                                        {{range $i := seq 1 $total}}
+                                            {{if le $i $completed}}
+                                                <div class="w-8 h-8 bg-red-500 rounded"></div>
+                                            {{else}}
+                                                <div class="w-8 h-8 bg-gray-200 rounded"></div>
+                                            {{end}}
+                                        {{end}}
+                                    </div>
+                                </div>
+                                {{else}}
+                                <div class="text-center py-8 text-gray-500 text-sm">No learning tracks yet</div>
+                                {{end}}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Labs Completed Card -->
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="bg-blue-50 text-gray-800 px-6 py-3">
+                            <span class="font-semibold">Labs completed:</span>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-3">
+                                {{range .CompletedLabs}}
+                                <div class="flex items-center gap-3">
+                                    <div class="w-5 h-5 border-2 border-green-500 bg-green-500 rounded flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-check text-white text-xs"></i>
+                                    </div>
+                                    <span class="text-sm text-gray-700">Lab & Exam: {{.Lab.Title}}</span>
+                                </div>
+                                {{else}}
+                                <div class="text-center py-8 text-gray-500 text-sm">No labs completed yet</div>
+                                {{end}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sidebarCollapsed = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
+            }
+        }
+
+        function toggleProfileDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            const button = document.getElementById('profileButton');
+            if (dropdown && button && !dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{{define "header.html"}}
+<div class="bg-white shadow-sm border-b border-gray-200 px-8 py-4 flex items-center justify-end" style="margin-left: 250px; position: fixed; top: 0; right: 0; left: 250px; z-index: 40;">
+    <div class="flex items-center gap-4">
+        <button class="relative p-2 text-gray-600 hover:text-gray-900">
+            <i class="fas fa-bell text-xl"></i>
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+        </button>
+        
+        <!-- Profile Dropdown -->
+        <div class="relative" x-data="{ open: false }">
+            <button id="profileButton" onclick="toggleProfileDropdown()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white overflow-hidden">
+                    {{if .User.ProfilePicture}}
+                        <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
+                    {{else}}
+                        <i class="fas fa-user"></i>
+                    {{end}}
+                </div>
+                <span class="font-semibold text-gray-700">{{.User.Name}}</span>
+                <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
+            </button>
+            
+            <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <a href="/student/profile" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-user w-5 text-gray-400"></i>
+                    <span>View Profile</span>
+                </a>
+                <a href="/student/profile/edit" class="flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-edit w-5 text-gray-400"></i>
+                    <span>Edit Profile</span>
+                </a>
+                <div class="border-t border-gray-200 my-1"></div>
+                <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleProfileDropdown() {
+        const dropdown = document.getElementById('profileDropdown');
+        dropdown.classList.toggle('hidden');
+    }
+</script>
+{{end}}

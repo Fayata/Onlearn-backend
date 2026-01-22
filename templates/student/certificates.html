@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sertifikat Saya | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { primary: '#2563eb', sidebar: '#1e293b', 'sidebar-hover': '#334155', gold: '#d97706' } } }
+        }
+    </script>
+    <style>
+        .cert-pattern {
+            background-color: #fdfbf7;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    
+    {{template "sidebar.html" .}}
+    {{template "header.html" .}}
+
+    <div style="margin-left: 250px;" id="mainContent" class="transition-all duration-300">
+        <div style="margin-top: 80px;" class="p-8">
+            <div class="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-bold mb-2">Pencapaian & Sertifikasi</h2>
+                        <p class="text-yellow-50 max-w-2xl">Bukti kompetensi Anda. Unduh dan bagikan sertifikat resmi dari setiap kursus dan lab yang telah diselesaikan.</p>
+                        <div class="mt-4 inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg">
+                            <i class="fas fa-medal"></i>
+                            <span class="font-bold">{{len .Certificates}} Sertifikat Dikumpulkan</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:block text-6xl opacity-20">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {{range .Certificates}}
+                <div class="bg-white cert-pattern rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-xl transition-all group relative">
+                    <div class="absolute top-4 right-4 z-10">
+                        {{if eq .Status "approved"}}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full border border-green-200 shadow-sm flex items-center gap-1"><i class="fas fa-check-circle"></i> Verified</span>
+                        {{else}}
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full border border-yellow-200 shadow-sm flex items-center gap-1"><i class="fas fa-clock"></i> Pending</span>
+                        {{end}}
+                    </div>
+                    <div class="h-40 bg-gray-50 flex items-center justify-center border-b border-gray-100 relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-100 to-transparent opacity-50"></div>
+                        <i class="fas fa-certificate text-6xl text-gray-300 group-hover:text-gold transition-colors duration-300 transform group-hover:scale-110"></i>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-bold text-lg text-gray-800 mb-1 line-clamp-2 leading-tight">{{.Title}}</h3>
+                        <p class="text-xs text-gray-500 mb-4 uppercase tracking-wide">Issued on {{.IssueDate.Format "02 Jan 2006"}}</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-user-check text-gray-400 w-5"></i> <span>Penerima: <b>{{$.User.Name}}</b></span></div>
+                            <div class="flex items-center gap-2 text-sm text-gray-600"><i class="fas fa-fingerprint text-gray-400 w-5"></i> <span class="truncate">ID: CRT-{{.ID}}-{{.UserID}}</span></div>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-gray-100">
+                            {{if eq .Status "approved"}}
+                            <a href="{{.URL}}" target="_blank" class="flex items-center justify-center w-full gap-2 px-4 py-2.5 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors font-medium"><i class="fas fa-download"></i> Unduh PDF</a>
+                            {{else}}
+                            <button disabled class="flex items-center justify-center w-full gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed font-medium"><i class="fas fa-hourglass-half"></i> Menunggu Verifikasi</button>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+                {{else}}
+                <div class="col-span-3 text-center py-16 bg-white rounded-xl border border-dashed border-gray-300">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-gray-50 rounded-full mb-4"><i class="fas fa-award text-gray-300 text-3xl"></i></div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Belum Ada Sertifikat</h3>
+                    <p class="text-gray-500 mb-6">Selesaikan kursus atau lab untuk mendapatkan sertifikat kompetensi Anda.</p>
+                    <a href="/student/courses" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 font-medium">Mulai Belajar</a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+    <script>
+        let sidebarCollapsed = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
+            }
+        }
+    </script>
+</body>
+</html>

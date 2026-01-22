@@ -3,39 +3,440 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.title}}</title>
-    
-    <!-- Tailwind CSS CDN -->
+    <title>Instructor Dashboard | OnLearn</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js for interactivity -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/css/style.css">
-    
-    <!-- Tailwind Config -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         primary: '#2563eb',
-                        secondary: '#0ea5e9',
                         sidebar: '#1e293b',
+                        'sidebar-hover': '#334155',
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-slate-50">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold">Instructor Dashboard</h1>
-        <p>Welcome to your dashboard!</p>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed left-0 top-0 h-screen bg-slate-800 text-white transition-all duration-300 overflow-y-auto z-50" style="width: 250px;">
+        <div class="flex items-center justify-between p-6 border-b border-gray-700">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-graduation-cap text-xl"></i>
+                </div>
+                <span id="brandText" class="text-xl font-bold">ONLEARN</span>
+            </div>
+            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white lg:hidden">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <nav class="p-4">
+            <a href="/instructor/dashboard" class="flex items-center gap-3 px-4 py-3 rounded-lg {{if eq .ActiveMenu "dashboard"}}bg-blue-600 text-white{{else}}hover:bg-slate-700{{end}} mb-2">
+                <i class="fas fa-chart-line w-5"></i>
+                <span class="nav-text">Dashboard</span>
+            </a>
+            <a href="/instructor/courses" class="flex items-center gap-3 px-4 py-3 rounded-lg {{if eq .ActiveMenu "courses"}}bg-blue-600 text-white{{else}}hover:bg-slate-700{{end}} mb-2">
+                <i class="fas fa-book w-5"></i>
+                <span class="nav-text">Semua Kursus</span>
+            </a>
+            <a href="/instructor/labs" class="flex items-center gap-3 px-4 py-3 rounded-lg {{if eq .ActiveMenu "labs"}}bg-blue-600 text-white{{else}}hover:bg-slate-700{{end}} mb-2">
+                <i class="fas fa-flask w-5"></i>
+                <span class="nav-text">Lab</span>
+            </a>
+            <a href="/instructor/certificates" class="flex items-center gap-3 px-4 py-3 rounded-lg {{if eq .ActiveMenu "certificates"}}bg-blue-600 text-white{{else}}hover:bg-slate-700{{end}} mb-2">
+                <i class="fas fa-certificate w-5"></i>
+                <span class="nav-text">Sertifikat</span>
+            </a>
+            <a href="/instructor/students" class="flex items-center gap-3 px-4 py-3 rounded-lg {{if eq .ActiveMenu "students"}}bg-blue-600 text-white{{else}}hover:bg-slate-700{{end}} mb-2">
+                <i class="fas fa-users w-5"></i>
+                <span class="nav-text">Daftar Student</span>
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
+            <div class="flex items-center gap-3 cursor-pointer hover:bg-slate-700 rounded-lg p-2">
+                <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden">
+                    {{if .User.ProfilePicture}}
+                        <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
+                    {{else}}
+                        <i class="fas fa-user"></i>
+                    {{end}}
+                </div>
+                <div class="nav-text flex-1 overflow-hidden">
+                    <p class="font-semibold text-sm truncate">{{.User.Name}}</p>
+                    <p class="text-xs text-gray-400 capitalize">Instructor</p>
+                </div>
+            </div>
+        </div>
     </div>
-    
-    <!-- Custom JS -->
-    <script src="/static/js/app.js"></script>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
+        <!-- Top Bar -->
+        <div class="bg-white shadow-sm border-b px-8 py-4 flex items-center justify-end">
+            <div class="flex items-center gap-4">
+                <button class="relative p-2 text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-bell text-xl"></i>
+                    <span class="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">{{.PendingGrades}}</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white overflow-hidden">
+                        {{if .User.ProfilePicture}}
+                            <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
+                        {{else}}
+                            <i class="fas fa-user"></i>
+                        {{end}}
+                    </div>
+                    <span class="font-semibold">{{.User.Name}}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div class="p-8">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+                <p class="text-sm text-gray-500">Selamat datang kembali, {{.User.Name}}</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-lg p-6 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                            <i class="fas fa-book text-2xl"></i>
+                        </div>
+                        <span class="text-4xl font-bold">{{.TotalCourses}}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold opacity-90">Total Kursus</h3>
+                </div>
+
+                <div class="bg-gradient-to-br from-green-500 to-green-700 rounded-xl shadow-lg p-6 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                            <i class="fas fa-users text-2xl"></i>
+                        </div>
+                        <span class="text-4xl font-bold">{{.TotalStudents}}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold opacity-90">Total Students</h3>
+                </div>
+
+                <div class="bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl shadow-lg p-6 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                            <i class="fas fa-clipboard-check text-2xl"></i>
+                        </div>
+                        <span class="text-4xl font-bold">{{.PendingGrades}}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold opacity-90">Pending Grades</h3>
+                    <p class="text-xs opacity-75 mt-1">Perlu segera dinilai</p>
+                </div>
+
+                <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl shadow-lg p-6 text-white">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                            <i class="fas fa-certificate text-2xl"></i>
+                        </div>
+                        <span class="text-4xl font-bold">{{.PendingCertificates}}</span>
+                    </div>
+                    <h3 class="text-sm font-semibold opacity-90">Pending Certificates</h3>
+                    <p class="text-xs opacity-75 mt-1">Menunggu approval</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <a href="/instructor/courses" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all group">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fas fa-plus text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 mb-1">Buat Kursus Baru</h3>
+                            <p class="text-sm text-gray-500">Tambahkan kursus dan modul</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/instructor/labs" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all group">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fas fa-flask text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 mb-1">Kelola Lab</h3>
+                            <p class="text-sm text-gray-500">Buat dan nilai lab praktikum</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="/instructor/certificates" class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all group">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fas fa-certificate text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 mb-1">Approve Sertifikat</h3>
+                            <p class="text-sm text-gray-500">Review dan konfirmasi</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Pending Assignments -->
+            <div class="bg-white rounded-2xl shadow-sm mb-8">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">Tugas yang Perlu Dinilai</h2>
+                            <p class="text-sm text-gray-500 mt-1">Prioritas tinggi - submit terbaru</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Student</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Kursus</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Modul</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Dikirim</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">File</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {{range .RecentSubmissions}}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <span class="font-semibold text-blue-600 text-sm">{{slice .User.Name 0 2 | upper}}</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-800">{{.User.Name}}</p>
+                                            <p class="text-xs text-gray-500">{{.User.Email}}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-sm text-gray-800">Course ID: {{.CourseID}}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="text-sm text-gray-600">Module ID: {{.ModuleID}}</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                                        <span class="text-sm text-gray-600">{{.SubmittedAt | timeSince}}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{if .FileURL}}
+                                    <a href="{{.FileURL}}" target="_blank" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
+                                        <i class="fas fa-download"></i>
+                                        Download
+                                    </a>
+                                    {{else}}
+                                    <span class="text-sm text-gray-400">No file</span>
+                                    {{end}}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button onclick="openGradeModal({{.ID}}, '{{.User.Name}}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors">
+                                        Nilai
+                                    </button>
+                                </td>
+                            </tr>
+                            {{else}}
+                            <tr>
+                                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                    Tidak ada tugas yang perlu dinilai
+                                </td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Labs & Recent Activity -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Labs with Ungraded Count -->
+                <div class="bg-white rounded-2xl shadow-sm">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">Lab yang Perlu Dinilai</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        {{range .UngradedLabs}}
+                        <div class="border-2 border-orange-200 bg-orange-50 rounded-xl p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-start justify-between mb-3">
+                                <h3 class="font-bold text-gray-800">{{.Title}}</h3>
+                                <span class="px-3 py-1 bg-orange-600 text-white text-xs font-bold rounded-full">{{.UngradedCount}}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-3">{{.UngradedCount}} student belum dinilai</p>
+                            <a href="/instructor/labs?lab_id={{.ID}}" class="block w-full px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors text-center">
+                                Lihat & Nilai
+                            </a>
+                        </div>
+                        {{else}}
+                        <div class="text-center py-8 text-gray-500 text-sm">
+                            Tidak ada lab yang perlu dinilai
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-2xl shadow-sm">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">Aktivitas Terbaru</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-check text-green-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm font-semibold text-gray-800">Nilai berhasil disimpan</p>
+                                <p class="text-xs text-gray-500 mt-1">Anda menilai tugas dari student</p>
+                                <p class="text-xs text-gray-400 mt-1">Baru saja</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grade Modal -->
+    <div id="gradeModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-gray-800">Nilai Tugas</h3>
+                    <button onclick="closeGradeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                            <span class="font-bold" id="modalStudentInitial">AS</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-800" id="modalStudentName">Andi Saputra</p>
+                            <p class="text-sm text-gray-600" id="modalCourseInfo">Backend Development - API Design</p>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="gradeForm" onsubmit="submitGrade(event)" class="space-y-4">
+                    <input type="hidden" id="assignmentId" name="assignment_id">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Nilai (0-100)</label>
+                        <input type="number" id="grade" name="grade" min="0" max="100" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Masukkan nilai">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Feedback</label>
+                        <textarea id="feedback" name="feedback" rows="5" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" placeholder="Berikan feedback untuk student..."></textarea>
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" onclick="closeGradeModal()" class="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                            Simpan Nilai
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sidebarCollapsed = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
+            }
+        }
+
+        function openGradeModal(assignmentId, studentName) {
+            document.getElementById('assignmentId').value = assignmentId;
+            document.getElementById('modalStudentName').textContent = studentName;
+            document.getElementById('modalStudentInitial').textContent = studentName.substring(0, 2).toUpperCase();
+            document.getElementById('gradeModal').classList.remove('hidden');
+        }
+
+        function closeGradeModal() {
+            document.getElementById('gradeModal').classList.add('hidden');
+            document.getElementById('gradeForm').reset();
+        }
+
+        async function submitGrade(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = {
+                assignment_id: parseInt(formData.get('assignment_id')),
+                grade: parseFloat(formData.get('grade')),
+                feedback: formData.get('feedback')
+            };
+
+            try {
+                const token = getCookie('token');
+                const response = await fetch('/api/v1/instructor/assignments/grade', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert('Nilai berhasil disimpan!');
+                    closeGradeModal();
+                    location.reload();
+                } else {
+                    const error = await response.json();
+                    alert('Gagal menyimpan nilai: ' + (error.error || 'Terjadi kesalahan'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan koneksi');
+            }
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+    </script>
 </body>
 </html>
