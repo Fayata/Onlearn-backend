@@ -49,6 +49,7 @@ type ModuleProgressRepository interface {
 	Create(ctx context.Context, progress *ModuleProgress) error
 	GetByUserAndModule(ctx context.Context, userID uint, moduleID string) (*ModuleProgress, error)
 	GetByUserAndCourse(ctx context.Context, userID uint, courseID uint) ([]ModuleProgress, error)
+	GetRecentByUser(ctx context.Context, userID uint, limit int) ([]ModuleProgress, error)
 	Update(ctx context.Context, progress *ModuleProgress) error
 	CountCompletedByUserAndCourse(ctx context.Context, userID uint, courseID uint) (int64, error)
 }
@@ -60,6 +61,7 @@ type AssignmentRepository interface {
 	GetByCourseID(ctx context.Context, courseID uint) ([]Assignment, error)
 	GetUngradedByCourseID(ctx context.Context, courseID uint) ([]Assignment, error)
 	GetRecentSubmissions(ctx context.Context, limit int) ([]Assignment, error)
+	GetRecentSubmissionsByUserID(ctx context.Context, userID uint, limit int) ([]Assignment, error)
 	Update(ctx context.Context, assignment *Assignment) error
 	CountUngradedByInstructor(ctx context.Context, instructorID uint) (int64, error)
 }
@@ -77,6 +79,7 @@ type LabRepository interface {
 	CreateGrade(ctx context.Context, grade *LabGrade) error
 	UpdateGrade(ctx context.Context, grade *LabGrade) error
 	GetGrade(ctx context.Context, userID, labID uint) (*LabGrade, error)
+	GetGradesByUserID(ctx context.Context, userID uint) ([]LabGrade, error)
 	GetGradesByLabID(ctx context.Context, labID uint) ([]LabGrade, error)
 	CountUngradedByLabID(ctx context.Context, labID uint) (int64, error)
 }

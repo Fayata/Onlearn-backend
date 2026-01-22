@@ -150,13 +150,38 @@ type Module struct {
 
 // StudentDashboardData - Data untuk dashboard student
 type StudentDashboardData struct {
-	TotalEnrollments   int                    `json:"total_enrollments"`
-	CompletedCourses   int                    `json:"completed_courses"`
-	InProgressCourses  int                    `json:"in_progress_courses"`
-	TotalCertificates  int                    `json:"total_certificates"`
-	RecentCertificates []Certificate          `json:"recent_certificates"`
-	OngoingEnrollments []EnrollmentWithCourse `json:"ongoing_enrollments"`
-	UpcomingLabs       []Lab                  `json:"upcoming_labs"`
+	User                *User                  `json:"user"`
+	TotalEnrollments    int                    `json:"total_enrollments"`
+	CompletedCourses    int                    `json:"completed_courses"`
+	InProgressCourses   int                    `json:"in_progress_courses"`
+	TotalCertificates   int                    `json:"total_certificates"`
+	LeaderboardRank     int                    `json:"leaderboard_rank"`
+	CompletedLabs       int                    `json:"completed_labs"`
+	AssignedLabs        int                    `json:"assigned_labs"`
+	WeeklyGoalProgress  int                    `json:"weekly_goal_progress"`
+	RecentActivities    []RecentActivity       `json:"recent_activities"`
+	RecentCertificates  []Certificate          `json:"recent_certificates"`
+	OngoingEnrollments  []EnrollmentWithCourse `json:"ongoing_enrollments"`
+	UpcomingLabs        []Lab                  `json:"upcoming_labs"`
+	UpcomingLabsSorted  []Lab                  `json:"upcoming_labs_sorted"`
+}
+
+type ActivityType string
+
+const (
+	ActivityModuleCompleted ActivityType = "module_completed"
+	ActivityTaskSubmitted   ActivityType = "task_submitted"
+	ActivityCertificateNew  ActivityType = "certificate_new"
+)
+
+type RecentActivity struct {
+	Type      ActivityType `json:"type"`
+	Title     string       `json:"title"`
+	Subtitle  string       `json:"subtitle"`
+	Timestamp time.Time    `json:"timestamp"`
+	Icon      string       `json:"icon"`
+	BgColor   string       `json:"bg_color"`
+	IconColor string       `json:"icon_color"`
 }
 
 // EnrollmentWithCourse - Enrollment dengan detail course

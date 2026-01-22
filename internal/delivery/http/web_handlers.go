@@ -42,9 +42,28 @@ func (h *WebHandler) ShowLoginPage(c *gin.Context) {
 // ========== STUDENT PAGES ==========
 
 func (h *WebHandler) StudentDashboard(c *gin.Context) {
-	c.HTML(http.StatusOK, "dashboard.html", gin.H{
-		"title": "Student Dashboard | OnLearn",
-	})
+	// Get user from context (set by auth middleware)
+	userValue, exists := c.Get("user")
+	if !exists {
+		c.Redirect(http.StatusFound, "/login?error=Unauthorized")
+		return
+	}
+
+	user, ok := userValue.(domain.User)
+	if !ok {
+		c.Redirect(http.StatusFound, "/login?error=Invalid+user+data")
+		return
+	}
+
+	// Get dashboard data
+	dashboardData, err := h.DashboardUsecase.GetStudentDashboard(c.Request.Context(), user.ID)
+	if err != nil {
+		// For simplicity, redirecting to login. A proper error page would be better.
+		c.Redirect(http.StatusFound, "/login?error=Could+not+load+dashboard")
+		return
+	}
+
+	c.HTML(http.StatusOK, "dashboard.html", dashboardData)
 }
 
 // ========== INSTRUCTOR PAGES ==========

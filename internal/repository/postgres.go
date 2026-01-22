@@ -209,6 +209,16 @@ func (r *moduleProgressRepo) GetByUserAndCourse(ctx context.Context, userID uint
 	return progress, err
 }
 
+func (r *moduleProgressRepo) GetRecentByUser(ctx context.Context, userID uint, limit int) ([]domain.ModuleProgress, error) {
+	var progress []domain.ModuleProgress
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND is_complete = ?", userID, true).
+		Order("updated_at DESC").
+		Limit(limit).
+		Find(&progress).Error
+	return progress, err
+}
+
 func (r *moduleProgressRepo) Update(ctx context.Context, progress *domain.ModuleProgress) error {
 	return r.db.WithContext(ctx).Save(progress).Error
 }
@@ -267,6 +277,17 @@ func (r *assignmentRepo) GetUngradedByCourseID(ctx context.Context, courseID uin
 	err := r.db.WithContext(ctx).Where("course_id = ? AND grade IS NULL", courseID).
 		Preload("User").
 		Order("submitted_at ASC").
+		Find(&assignments).Error
+	return assignments, err
+}
+
+func (r *assignmentRepo) GetRecentSubmissionsByUserID(ctx context.Context, userID uint, limit int) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Preload("User").
+		Order("submitted_at DESC").
+		Limit(limit).
 		Find(&assignments).Error
 	return assignments, err
 }
@@ -362,6 +383,12 @@ func (r *labRepo) GetGrade(ctx context.Context, userID, labID uint) (*domain.Lab
 		return nil, nil
 	}
 	return &grade, err
+}
+
+func (r *labRepo) GetGradesByUserID(ctx context.Context, userID uint) ([]domain.LabGrade, error) {
+	var grades []domain.LabGrade
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Preload("Lab").Find(&grades).Error
+	return grades, err
 }
 
 func (r *labRepo) GetGradesByLabID(ctx context.Context, labID uint) ([]domain.LabGrade, error) {
