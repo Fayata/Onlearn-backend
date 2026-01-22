@@ -3,13 +3,85 @@ package http
 import (
 	"fmt"
 	"html/template"
+	// "net/http"
 	"onlearn-backend/internal/domain"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/render"
 )
+
+// pathRenderer is a custom HTML template renderer for Gin that uses file paths as template names.
+type pathRenderer struct {
+	templates map[string]*template.Template
+	funcMap   template.FuncMap
+}
+
+// newPathRenderer creates a new pathRenderer.
+func newPathRenderer(dir string, funcMap template.FuncMap) *pathRenderer {
+	r := &pathRenderer{
+		templates: make(map[string]*template.Template),
+		funcMap:   funcMap,
+	}
+
+	layouts, err := filepath.Glob(filepath.Join(dir, "layouts", "*.html"))
+	if err != nil {
+		panic("Failed to glob layout templates: " + err.Error())
+	}
+
+	partials, err := filepath.Glob(filepath.Join(dir, "partials", "*.html"))
+	if err != nil {
+		panic("Failed to glob partial templates: " + err.Error())
+	}
+
+	var pageFiles []string
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(path, ".html") && !strings.Contains(path, "layouts") && !strings.Contains(path, "partials") {
+			pageFiles = append(pageFiles, path)
+		}
+		return nil
+	})
+	if err != nil {
+		panic("Failed to walk page templates: " + err.Error())
+	}
+
+	for _, page := range pageFiles {
+		filesToParse := append([]string{page}, layouts...)
+		filesToParse = append(filesToParse, partials...)
+
+		relPath, err := filepath.Rel(dir, page)
+		if err != nil {
+			panic("Failed to get relative path: " + err.Error())
+		}
+		name := filepath.ToSlash(relPath)
+
+		tmpl := template.New(filepath.Base(page)).Funcs(funcMap)
+		tmpl, err = tmpl.ParseFiles(filesToParse...)
+		if err != nil {
+			panic("Failed to parse template files for " + name + ": " + err.Error())
+		}
+		r.templates[name] = tmpl
+	}
+
+	return r
+}
+
+
+// Instance returns a render.Render instance for the given template name.
+func (r *pathRenderer) Instance(name string, data interface{}) render.Render {
+	return render.HTML{
+		Template: r.templates[name],
+		Data:     data,
+	}
+}
+
 
 func InitWebRouter(router *gin.Engine, webHandler *WebHandler) {
 	router.SetFuncMap(template.FuncMap{
@@ -124,11 +196,8 @@ func InitWebRouter(router *gin.Engine, webHandler *WebHandler) {
 	})
 
 	router.Static("/static", "./static")
-	
-	// Load templates using glob pattern - this will use path as template name
-	// e.g., templates/auth/login.html -> auth/login.html
-	router.LoadHTMLGlob("templates/*/*")
-	router.LoadHTMLGlob("../templates/*/*")
+
+	router.HTMLRender = newPathRenderer("templates", router.FuncMap)
 
 	web := router.Group("/")
 	{
