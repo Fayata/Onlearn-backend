@@ -127,7 +127,8 @@ func InitWebRouter(router *gin.Engine, webHandler *WebHandler) {
 	
 	// Load templates using glob pattern - this will use path as template name
 	// e.g., templates/auth/login.html -> auth/login.html
-	router.LoadHTMLGlob("templates/**/*.html")
+	router.LoadHTMLGlob("templates/*/*")
+	router.LoadHTMLGlob("../templates/*/*")
 
 	web := router.Group("/")
 	{
