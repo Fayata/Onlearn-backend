@@ -131,7 +131,6 @@ func (h *WebHandler) RegisterWeb(c *gin.Context) {
 	email := c.PostForm("email")
 	password := c.PostForm("password")
 
-	// Validasi Manual
 	if name == "" || email == "" || password == "" {
 		c.HTML(http.StatusOK, "auth/register.html", gin.H{
 			"error": "Semua kolom wajib diisi.",
@@ -142,7 +141,6 @@ func (h *WebHandler) RegisterWeb(c *gin.Context) {
 		return
 	}
 
-	// Create User Struct
 	user := &domain.User{
 		Name:     name,
 		Email:    email,
@@ -367,7 +365,7 @@ func (h *WebHandler) StudentModuleViewer(c *gin.Context) {
 
 	// Verify user is enrolled
 	if !courseDetail.IsEnrolled {
-		c.Redirect(http.StatusFound, "/student/browse?error=Anda belum terdaftar di kursus ini")
+		c.Redirect(http.StatusFound, "/student/courses/"+courseIDStr+"?error=You are not enrolled in this course")
 		return
 	}
 
@@ -444,8 +442,8 @@ func (h *WebHandler) InstructorDashboard(c *gin.Context) {
 		"RecentSubmissions":   dashboardData.RecentSubmissions,
 		"UngradedLabs":        dashboardData.UngradedLabs,
 		"Title":               "Dashboard",
-		"PageTitle":            "Dashboard",
-		"ActiveMenu":           "dashboard",
+		"PageTitle":           "Dashboard",
+		"ActiveMenu":          "dashboard",
 	}
 
 	c.HTML(http.StatusOK, "instructor/dashboard.html", data)
@@ -566,7 +564,7 @@ func (h *WebHandler) InstructorLabs(c *gin.Context) {
 	for _, lab := range labs {
 		ungradedCount, _ := h.LabUsecase.GetUngradedCountByLabID(c.Request.Context(), lab.ID)
 		labsWithUngraded = append(labsWithUngraded, LabWithUngraded{
-			Lab:          lab,
+			Lab:           lab,
 			UngradedCount: ungradedCount,
 		})
 	}
@@ -622,11 +620,11 @@ func (h *WebHandler) InstructorCertificates(c *gin.Context) {
 	}
 
 	data := gin.H{
-		"User":            user,
-		"PendingCerts":    filteredPending,
-		"Title":           "Sertifikat Management",
-		"PageTitle":       "Sertifikat Management",
-		"ActiveMenu":      "certificates",
+		"User":         user,
+		"PendingCerts": filteredPending,
+		"Title":        "Sertifikat Management",
+		"PageTitle":    "Sertifikat Management",
+		"ActiveMenu":   "certificates",
 	}
 
 	c.HTML(http.StatusOK, "instructor/certificates.html", data)
@@ -660,15 +658,15 @@ func (h *WebHandler) InstructorStudents(c *gin.Context) {
 		TotalProgress   float64
 		PendingTasks    int
 	}
-	
+
 	allStudentsMap := make(map[uint]*StudentWithCourses)
-	
+
 	for _, course := range courses {
 		students, _ := h.CourseUsecase.GetCourseStudents(c.Request.Context(), course.ID)
 		for _, student := range students {
 			if _, exists := allStudentsMap[student.ID]; !exists {
 				allStudentsMap[student.ID] = &StudentWithCourses{
-					User:           student,
+					User:            student,
 					EnrolledCourses: []domain.Course{},
 					TotalProgress:   0,
 					PendingTasks:    0,
@@ -688,7 +686,7 @@ func (h *WebHandler) InstructorStudents(c *gin.Context) {
 		if len(enrollments) > 0 {
 			studentData.TotalProgress = totalProgress / float64(len(enrollments))
 		}
-		
+
 		// Count pending assignments (ungraded)
 		// This would require additional API call, for now set to 0
 		studentData.PendingTasks = 0
@@ -700,11 +698,11 @@ func (h *WebHandler) InstructorStudents(c *gin.Context) {
 	}
 
 	data := gin.H{
-		"User":     user,
-		"Students": allStudents,
-		"Courses":  courses,
-		"Title":    "Daftar Student",
-		"PageTitle": "Daftar Student",
+		"User":       user,
+		"Students":   allStudents,
+		"Courses":    courses,
+		"Title":      "Daftar Student",
+		"PageTitle":  "Daftar Student",
 		"ActiveMenu": "students",
 	}
 
@@ -876,7 +874,7 @@ func (h *WebHandler) StudentProfileEdit(c *gin.Context) {
 		// Handle form submission
 		name := c.PostForm("name")
 		password := c.PostForm("password")
-		
+
 		user := &domain.User{
 			ID:       userID,
 			Name:     name,
