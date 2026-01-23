@@ -139,7 +139,8 @@ type Module struct {
 	CourseID    uint       `json:"course_id" bson:"course_id"`
 	Title       string     `json:"title" bson:"title"`
 	Type        ModuleType `json:"type" bson:"type"`                               // pdf atau ppt
-	ContentURL  string     `json:"content_url" bson:"content_url"`                 // Path ke file PDF/PPT
+	ContentURL  string     `json:"content_url" bson:"content_url"`                 // Path ke file PDF/PPT (legacy)
+	FileID      string     `json:"file_id,omitempty" bson:"file_id,omitempty"`     // GridFS File ID
 	QuizLink    string     `json:"quiz_link,omitempty" bson:"quiz_link,omitempty"` // Google Form (optional)
 	Description string     `json:"description" bson:"description"`
 	Order       int        `json:"order" bson:"order"` // Urutan modul dalam course

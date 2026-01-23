@@ -142,16 +142,21 @@
 
         // Action Handlers
         function startLab(id) {
-            if(confirm('Apakah Anda siap memulai sesi lab ini? Waktu akan berjalan.')) {
-                // window.location.href = `/student/labs/${id}/start`;
-                alert('Mengarahkan ke environment lab...');
-            }
+            NotificationDialog.confirm(
+                'Apakah Anda siap memulai sesi lab ini? Waktu akan berjalan dan tidak bisa dihentikan.',
+                () => {
+                    // Logic to start the lab, e.g., redirect.
+                    // window.location.href = `/student/labs/${id}/start`;
+                    NotificationDialog.alert('Mengarahkan ke environment lab...', 'Mulai Lab');
+                },
+                'Mulai Sesi Lab?'
+            );
         }
         function viewDetail(id) {
-            alert('Menampilkan detail lab ' + id);
+            NotificationDialog.alert('Detail untuk lab ini belum tersedia.', 'Info Lab');
         }
         function viewResult(id) {
-            alert('Hasil lab belum dipublikasikan.');
+            NotificationDialog.alert('Hasil lab Anda belum dipublikasikan oleh instruktur.', 'Hasil Lab');
         }
     </script>
 </body>

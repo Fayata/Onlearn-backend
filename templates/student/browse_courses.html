@@ -127,18 +127,34 @@
             }
         }
         function viewCourseDetail(courseId) { window.location.href = `/student/courses/${courseId}`; }
-        async function enrollCourse(courseId) {
-            if (!confirm('Apakah Anda yakin ingin mendaftar kursus ini?')) return;
-            try {
-                const response = await fetch(`/api/v1/student/courses/${courseId}/enroll`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-                if (response.ok) {
-                    alert('Berhasil mendaftar kursus!');
-                    window.location.href = '/student/courses';
-                } else {
-                    const error = await response.json();
-                    alert('Gagal mendaftar: ' + (error.error || 'Terjadi kesalahan'));
-                }
-            } catch (error) { console.error('Error:', error); alert('Terjadi kesalahan koneksi'); }
+        
+        function enrollCourse(courseId) {
+            NotificationDialog.confirm(
+                'Apakah Anda yakin ingin mendaftar di kursus ini?',
+                async () => {
+                    try {
+                        const response = await fetch(`/api/v1/student/courses/${courseId}/enroll`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        if (response.ok) {
+                            NotificationDialog.alert('Anda berhasil mendaftar kursus!', 'Sukses');
+                            // Redirect after a short delay to allow user to read the message
+                            setTimeout(() => {
+                                window.location.href = '/student/courses';
+                            }, 1500);
+                        } else {
+                            const error = await response.json();
+                            NotificationDialog.alert('Gagal mendaftar: ' + (error.error || 'Terjadi kesalahan'), 'Gagal');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        NotificationDialog.alert('Terjadi kesalahan koneksi.', 'Error');
+                    }
+                },
+                'Konfirmasi Pendaftaran'
+            );
         }
         document.getElementById('searchInput').addEventListener('keyup', function(e) {
             const searchTerm = e.target.value.toLowerCase();

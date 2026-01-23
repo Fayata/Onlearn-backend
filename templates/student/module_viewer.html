@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Module.Title}} | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PDF.js for PDF viewing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <style>
+        .viewer-container {
+            height: calc(100vh - 140px);
+        }
+        .pdf-page {
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .slide-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: #1a1a2e;
+        }
+        .slide-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .control-btn {
+            transition: all 0.2s;
+        }
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #pdfViewer {
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: #f3f4f6;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+    {{template "toast.html" .}}
+    
+    <!-- Top Navigation Bar -->
+    <div class="bg-gray-800 text-white px-6 py-4 flex items-center justify-between shadow-lg">
+        <div class="flex items-center gap-4">
+            <a href="/student/courses/{{.Course.ID}}" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fas fa-arrow-left text-xl"></i>
+            </a>
+            <div>
+                <h1 class="text-lg font-bold">{{.Module.Title}}</h1>
+                <p class="text-sm text-gray-400">{{.Course.Title}}</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <!-- Module Type Badge -->
+            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase
+                {{if eq .Module.Type "pdf"}}bg-red-600{{else}}bg-orange-600{{end}}">
+                {{.Module.Type}}
+            </span>
+            
+            <!-- Download Button -->
+            <a href="{{.FileURL}}" download class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                <i class="fas fa-download"></i>
+                Download
+            </a>
+            
+            <!-- Mark Complete Button -->
+            {{if not .IsComplete}}
+            <button onclick="markComplete()" id="completeBtn" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                <i class="fas fa-check"></i>
+                Tandai Selesai
+            </button>
+            {{else}}
+            <span class="px-4 py-2 bg-green-800 rounded-lg text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                Sudah Selesai
+            </span>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- Viewer Container -->
+    <div class="viewer-container relative">
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
+            <div class="text-center">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-white">Memuat konten...</p>
+            </div>
+        </div>
+
+        {{if eq .Module.Type "pdf"}}
+        <!-- PDF Viewer -->
+        <div id="pdfViewer" class="w-full h-full hidden">
+            <!-- PDF pages will be rendered here -->
+        </div>
+        
+        <!-- PDF Controls -->
+        <div id="pdfControls" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-full px-6 py-3 shadow-lg flex items-center gap-4 hidden">
+            <button onclick="zoomOut()" class="control-btn text-white hover:text-blue-400">
+                <i class="fas fa-search-minus text-lg"></i>
+            </button>
+            <span id="zoomLevel" class="text-white text-sm min-w-[60px] text-center">100%</span>
+            <button onclick="zoomIn()" class="control-btn text-white hover:text-blue-400">
+                <i class="fas fa-search-plus text-lg"></i>
+            </button>
+            <div class="w-px h-6 bg-gray-600"></div>
+            <span id="pageInfo" class="text-white text-sm">Page 1 / 1</span>
+        </div>
+        {{else}}
+        <!-- PPT/Slide Viewer -->
+        <div id="pptViewer" class="slide-container hidden">
+            <div class="relative w-full max-w-5xl">
+                <!-- Slide Display -->
+                <div id="slideDisplay" class="bg-white rounded-lg shadow-2xl overflow-hidden aspect-video flex items-center justify-center">
+                    <p class="text-gray-500">Loading presentation...</p>
+                </div>
+                
+                <!-- Slide Navigation -->
+                <div class="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-16">
+                    <button onclick="prevSlide()" id="prevBtn" class="control-btn w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center">
+                        <i class="fas fa-chevron-left text-xl"></i>
+                    </button>
+                </div>
+                <div class="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-16">
+                    <button onclick="nextSlide()" id="nextBtn" class="control-btn w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center">
+                        <i class="fas fa-chevron-right text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PPT Controls -->
+        <div id="pptControls" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-full px-6 py-3 shadow-lg flex items-center gap-4 hidden">
+            <button onclick="prevSlide()" class="control-btn text-white hover:text-blue-400">
+                <i class="fas fa-step-backward text-lg"></i>
+            </button>
+            <span id="slideInfo" class="text-white text-sm min-w-[80px] text-center">Slide 1 / 1</span>
+            <button onclick="nextSlide()" class="control-btn text-white hover:text-blue-400">
+                <i class="fas fa-step-forward text-lg"></i>
+            </button>
+            <div class="w-px h-6 bg-gray-600"></div>
+            <button onclick="toggleFullscreen()" class="control-btn text-white hover:text-blue-400">
+                <i class="fas fa-expand text-lg"></i>
+            </button>
+        </div>
+        {{end}}
+
+        <!-- Fallback Download Message -->
+        <div id="fallbackMessage" class="absolute inset-0 flex items-center justify-center bg-gray-900 hidden">
+            <div class="text-center text-white">
+                <i class="fas fa-file-alt text-6xl mb-4 text-gray-500"></i>
+                <h2 class="text-xl font-bold mb-2">Preview tidak tersedia</h2>
+                <p class="text-gray-400 mb-4">File ini tidak dapat ditampilkan langsung di browser</p>
+                <a href="{{.FileURL}}" download class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors inline-flex items-center gap-2">
+                    <i class="fas fa-download"></i>
+                    Download File
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const moduleID = "{{.Module.ID}}";
+        const courseID = {{.Course.ID}};
+        const moduleType = "{{.Module.Type}}";
+        const fileURL = "{{.FileURL}}";
+        
+        let pdfDoc = null;
+        let currentZoom = 1.0;
+        let currentSlide = 1;
+        let totalSlides = 1;
+        let slideImages = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (moduleType === 'pdf') {
+                loadPDF();
+            } else if (moduleType === 'ppt') {
+                loadPPT();
+            } else {
+                showFallback();
+            }
+        });
+
+        // ========== PDF Functions ==========
+        async function loadPDF() {
+            try {
+                const loadingTask = pdfjsLib.getDocument(fileURL);
+                pdfDoc = await loadingTask.promise;
+                
+                const viewer = document.getElementById('pdfViewer');
+                viewer.innerHTML = '';
+                
+                // Render all pages
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const page = await pdfDoc.getPage(pageNum);
+                    const scale = currentZoom * 1.5;
+                    const viewport = page.getViewport({ scale });
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'pdf-page';
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    const context = canvas.getContext('2d');
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport
+                    }).promise;
+                    
+                    viewer.appendChild(canvas);
+                }
+                
+                document.getElementById('pageInfo').textContent = `${pdfDoc.numPages} halaman`;
+                hideLoading();
+                document.getElementById('pdfViewer').classList.remove('hidden');
+                document.getElementById('pdfControls').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                showFallback();
+            }
+        }
+
+        function zoomIn() {
+            if (currentZoom < 2.0) {
+                currentZoom += 0.25;
+                document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+                loadPDF();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > 0.5) {
+                currentZoom -= 0.25;
+                document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+                loadPDF();
+            }
+        }
+
+        // ========== PPT Functions ==========
+        async function loadPPT() {
+            try {
+                const slideDisplay = document.getElementById('slideDisplay');
+                
+                // Use Microsoft Office Online viewer for PPTX files
+                const encodedURL = encodeURIComponent(window.location.origin + fileURL);
+                
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodedURL}`;
+                iframe.className = 'w-full h-full';
+                iframe.style.border = 'none';
+                iframe.style.minHeight = '500px';
+                iframe.setAttribute('allowfullscreen', 'true');
+                
+                slideDisplay.innerHTML = '';
+                slideDisplay.appendChild(iframe);
+                
+                hideLoading();
+                document.getElementById('pptViewer').classList.remove('hidden');
+                document.getElementById('pptControls').classList.add('hidden');
+                
+                setTimeout(() => {
+                    if (iframe.contentDocument && iframe.contentDocument.body.innerHTML === '') {
+                        showLocalPPTViewer();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                console.error('Error loading PPT:', error);
+                showFallback();
+            }
+        }
+
+        function showLocalPPTViewer() {
+            const slideDisplay = document.getElementById('slideDisplay');
+            slideDisplay.innerHTML = `
+                <div class="text-center p-8">
+                    <i class="fas fa-file-powerpoint text-6xl text-orange-500 mb-4"></i>
+                    <h3 class="text-xl font-bold text-gray-800 mb-2">Presentasi PowerPoint</h3>
+                    <p class="text-gray-600 mb-4">Klik tombol di bawah untuk membuka presentasi</p>
+                    <div class="flex gap-4 justify-center">
+                        <a href="${fileURL}" download class="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2">
+                            <i class="fas fa-download"></i>
+                            Download PPT
+                        </a>
+                        <a href="https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(window.location.origin + fileURL)}" 
+                           target="_blank"
+                           class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2">
+                            <i class="fas fa-external-link-alt"></i>
+                            Buka di Office Online
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function updateSlide() {
+            document.getElementById('slideInfo').textContent = `Slide ${currentSlide} / ${totalSlides}`;
+            document.getElementById('prevBtn').disabled = currentSlide === 1;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+        }
+
+        function toggleFullscreen() {
+            const viewer = document.getElementById('pptViewer');
+            if (!document.fullscreenElement) {
+                viewer.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // ========== Common Functions ==========
+        function hideLoading() {
+            document.getElementById('loadingIndicator').classList.add('hidden');
+        }
+
+        function showFallback() {
+            hideLoading();
+            document.getElementById('fallbackMessage').classList.remove('hidden');
+        }
+
+        async function markComplete() {
+            const btn = document.getElementById('completeBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+            
+            try {
+                const token = getCookie('token');
+                const response = await fetch('/api/v1/student/modules/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        module_id: moduleID,
+                        course_id: courseID
+                    })
+                });
+
+                if (response.ok) {
+                    btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    btn.classList.add('bg-green-800');
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Sudah Selesai';
+                    btn.disabled = true;
+                    Toast.success('Modul berhasil ditandai selesai!');
+                } else {
+                    throw new Error('Failed to mark complete');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check"></i> Tandai Selesai';
+                Toast.error('Gagal menandai modul sebagai selesai');
+            }
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (moduleType === 'ppt') {
+                if (e.key === 'ArrowLeft') prevSlide();
+                if (e.key === 'ArrowRight') nextSlide();
+                if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+            }
+        });
+    </script>
+</body>
+</html>

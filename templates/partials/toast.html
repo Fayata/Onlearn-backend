@@ -1,0 +1,212 @@
+{{define "toast.html"}}
+<!-- Toast Notification Container -->
+<div id="toastContainer" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
+    <!-- Toasts will be inserted here -->
+</div>
+
+<style>
+    .toast {
+        pointer-events: auto;
+        animation: slideInRight 0.3s ease-out, fadeOut 0.3s ease-in forwards;
+        animation-delay: 0s, 4.7s;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+    }
+    
+    .toast-progress {
+        animation: shrink 5s linear forwards;
+    }
+    
+    @keyframes shrink {
+        from { width: 100%; }
+        to { width: 0%; }
+    }
+</style>
+
+<script>
+    // Toast Notification System
+    const Toast = {
+        container: null,
+        
+        init() {
+            this.container = document.getElementById('toastContainer');
+        },
+        
+        show(message, type = 'info', duration = 5000) {
+            if (!this.container) this.init();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast max-w-md w-full bg-white rounded-xl shadow-2xl overflow-hidden border-l-4 ${this.getBorderColor(type)}`;
+            
+            toast.innerHTML = `
+                <div class="p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full ${this.getBgColor(type)} flex items-center justify-center">
+                            <i class="${this.getIcon(type)} ${this.getIconColor(type)} text-lg"></i>
+                        </div>
+                        <div class="flex-1 pt-1">
+                            <p class="font-semibold text-gray-800">${this.getTitle(type)}</p>
+                            <p class="text-sm text-gray-600 mt-1">${message}</p>
+                        </div>
+                        <button onclick="this.closest('.toast').remove()" class="text-gray-400 hover:text-gray-600 p-1">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="h-1 ${this.getProgressColor(type)}">
+                    <div class="toast-progress h-full ${this.getProgressBgColor(type)}" style="animation-duration: ${duration}ms"></div>
+                </div>
+            `;
+            
+            this.container.appendChild(toast);
+            
+            // Auto remove after duration
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, duration);
+            
+            return toast;
+        },
+        
+        success(message, duration = 5000) {
+            return this.show(message, 'success', duration);
+        },
+        
+        error(message, duration = 6000) {
+            return this.show(message, 'error', duration);
+        },
+        
+        warning(message, duration = 5000) {
+            return this.show(message, 'warning', duration);
+        },
+        
+        info(message, duration = 5000) {
+            return this.show(message, 'info', duration);
+        },
+        
+        getBorderColor(type) {
+            const colors = {
+                success: 'border-green-500',
+                error: 'border-red-500',
+                warning: 'border-yellow-500',
+                info: 'border-blue-500'
+            };
+            return colors[type] || colors.info;
+        },
+        
+        getBgColor(type) {
+            const colors = {
+                success: 'bg-green-100',
+                error: 'bg-red-100',
+                warning: 'bg-yellow-100',
+                info: 'bg-blue-100'
+            };
+            return colors[type] || colors.info;
+        },
+        
+        getIcon(type) {
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-check-circle',
+                warning: 'fas fa-check-circle',
+                info: 'fas fa-check-circle'
+            };
+            return icons[type] || icons.info;
+        },
+        
+        getIconColor(type) {
+            const colors = {
+                success: 'text-green-600',
+                error: 'text-red-600',
+                warning: 'text-yellow-600',
+                info: 'text-blue-600'
+            };
+            return colors[type] || colors.info;
+        },
+        
+        getTitle(type) {
+            const titles = {
+                success: 'Berhasil!',
+                error: 'Gagal!',
+                warning: 'Peringatan!',
+                info: 'Informasi!'
+            };
+            return titles[type] || titles.info;
+        },
+        
+        getProgressColor(type) {
+            const colors = {
+                success: 'bg-green-100',
+                error: 'bg-red-100',
+                warning: 'bg-yellow-100',
+                info: 'bg-blue-100'
+            };
+            return colors[type] || colors.info;
+        },
+        
+        getProgressBgColor(type) {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                warning: 'bg-yellow-500',
+                info: 'bg-blue-500'
+            };
+            return colors[type] || colors.info;
+        }
+    };
+    
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+        Toast.init();
+        
+        // Check for URL parameters for flash messages
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.get('success')) {
+            Toast.success(urlParams.get('success'));
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        if (urlParams.get('error')) {
+            Toast.error(urlParams.get('error'));
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        if (urlParams.get('warning')) {
+            Toast.warning(urlParams.get('warning'));
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        if (urlParams.get('info')) {
+            Toast.info(urlParams.get('info'));
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    });
+</script>
+{{end}}

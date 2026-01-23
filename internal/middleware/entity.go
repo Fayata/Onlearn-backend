@@ -100,7 +100,8 @@ type Module struct {
 	Title          string             `bson:"title" json:"title"`
 	Order          int                `bson:"order" json:"order"`
 	Type           ModuleType         `bson:"type" json:"type"`
-	ContentURL     string             `bson:"content_url" json:"content_url"`                   // Link ke file PDF/PPT
+	ContentURL     string             `bson:"content_url" json:"content_url"`                   // Link ke file PDF/PPT (legacy)
+	FileID         string             `bson:"file_id,omitempty" json:"file_id,omitempty"`       // GridFS File ID
 	AssignmentLink string             `bson:"assignment_link,omitempty" json:"assignment_link"` // GForm Link
 	IsCompleted    bool               `bson:"-" json:"is_completed"`                            // Field virtual untuk response API student
 }

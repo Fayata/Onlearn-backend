@@ -7,7 +7,6 @@ import (
 	"onlearn-backend/internal/domain"
 	"onlearn-backend/pkg/utils"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -723,36 +722,10 @@ func (h *Handler) GradeAssignment(c *gin.Context) {
 // ========== LAB HANDLERS ==========
 
 func (h *Handler) CreateLab(c *gin.Context) {
-	var input struct {
-		Title       string `json:"title" binding:"required"`
-		Description string `json:"description"`
-		StartTime   string `json:"start_time" binding:"required"`
-		EndTime     string `json:"end_time" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var lab domain.Lab
+	if err := c.ShouldBindJSON(&lab); err != nil {
 		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
 		return
-	}
-
-	const layout = "2006-01-02T15:04"
-	startTime, err := time.Parse(layout, input.StartTime)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start_time format. Use YYYY-MM-DDTHH:MM"})
-		return
-	}
-
-	endTime, err := time.Parse(layout, input.EndTime)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end_time format. Use YYYY-MM-DDTHH:MM"})
-		return
-	}
-
-	lab := domain.Lab{
-		Title:       input.Title,
-		Description: input.Description,
-		StartTime:   startTime,
-		EndTime:     endTime,
 	}
 
 	if err := h.LabUsecase.CreateLab(c.Request.Context(), &lab); err != nil {
@@ -814,58 +787,17 @@ func (h *Handler) UpdateLab(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		StartTime   string `json:"start_time"`
-		EndTime     string `json:"end_time"`
-		Status      string `json:"status"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var lab domain.Lab
+	if err := c.ShouldBindJSON(&lab); err != nil {
 		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
 		return
 	}
 
-	lab := domain.Lab{
-		ID:          uint(labID),
-		Title:       input.Title,
-		Description: input.Description,
-		Status:      input.Status,
-	}
+	lab.ID = uint(labID)
 
-	// If fields are empty, keep existing values
-	if lab.Title == "" {
-		lab.Title = existing.Title
-	}
-	if lab.Description == "" {
-		lab.Description = existing.Description
-	}
+	// If status not provided, keep existing
 	if lab.Status == "" {
 		lab.Status = existing.Status
-	}
-
-	const layout = "2006-01-02T15:04"
-	if input.StartTime != "" {
-		startTime, err := time.Parse(layout, input.StartTime)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start_time format. Use YYYY-MM-DDTHH:MM"})
-			return
-		}
-		lab.StartTime = startTime
-	} else {
-		lab.StartTime = existing.StartTime
-	}
-
-	if input.EndTime != "" {
-		endTime, err := time.Parse(layout, input.EndTime)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end_time format. Use YYYY-MM-DDTHH:MM"})
-			return
-		}
-		lab.EndTime = endTime
-	} else {
-		lab.EndTime = existing.EndTime
 	}
 
 	if err := h.LabUsecase.UpdateLab(c.Request.Context(), &lab); err != nil {
@@ -875,7 +807,6 @@ func (h *Handler) UpdateLab(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Lab updated successfully", "lab": lab})
 }
-
 
 func (h *Handler) DeleteLab(c *gin.Context) {
 	_, err := getUserID(c)

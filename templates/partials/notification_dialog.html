@@ -1,0 +1,105 @@
+{{define "notification_dialog.html"}}
+<!-- Custom Dialog Container -->
+<div id="customDialog" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-50 pointer-events-none opacity-0 transition-opacity duration-300">
+    <div id="customDialogBox" class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6 transform scale-95 transition-all duration-300">
+        <h3 id="dialogTitle" class="text-lg font-semibold text-gray-900"></h3>
+        <p id="dialogMessage" class="mt-2 text-sm text-gray-600"></p>
+        <div id="dialogButtons" class="mt-6 flex justify-end gap-3">
+            <!-- Buttons will be injected here -->
+        </div>
+    </div>
+</div>
+
+<script>
+const NotificationDialog = {
+    dialog: null,
+    dialogBox: null,
+    titleElement: null,
+    messageElement: null,
+    buttonsElement: null,
+
+    init() {
+        this.dialog = document.getElementById('customDialog');
+        this.dialogBox = document.getElementById('customDialogBox');
+        this.titleElement = document.getElementById('dialogTitle');
+        this.messageElement = document.getElementById('dialogMessage');
+        this.buttonsElement = document.getElementById('dialogButtons');
+        
+        // Hide when clicking the overlay
+        this.dialog.addEventListener('click', (event) => {
+            if (event.target === this.dialog) {
+                this.hide();
+            }
+        });
+    },
+
+    _show(title, message, buttons) {
+        if (!this.dialog) this.init();
+
+        this.titleElement.textContent = title;
+        this.messageElement.innerHTML = message; // Use innerHTML to allow for simple formatting if needed
+        this.buttonsElement.innerHTML = ''; // Clear old buttons
+
+        buttons.forEach(button => {
+            const btn = document.createElement('button');
+            btn.textContent = button.text;
+            btn.className = button.class;
+            btn.onclick = () => {
+                if (button.action) {
+                    button.action();
+                }
+                this.hide();
+            };
+            this.buttonsElement.appendChild(btn);
+        });
+        
+        this.dialog.classList.remove('pointer-events-none', 'opacity-0');
+        this.dialogBox.classList.remove('scale-95');
+        
+        this.dialog.classList.add('pointer-events-auto', 'opacity-100');
+        this.dialogBox.classList.add('scale-100');
+    },
+
+    hide() {
+        if (!this.dialog) return;
+
+        this.dialog.classList.add('opacity-0');
+        this.dialogBox.classList.add('scale-95');
+
+        setTimeout(() => {
+            this.dialog.classList.add('pointer-events-none');
+            this.dialogBox.classList.remove('scale-100');
+        }, 300);
+    },
+
+    alert(message, title = 'Notifikasi') {
+        const buttons = [
+            {
+                text: 'OK',
+                class: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500',
+            }
+        ];
+        this._show(title, message, buttons);
+    },
+
+    confirm(message, onConfirm, title = 'Konfirmasi') {
+        const buttons = [
+            {
+                text: 'Batal',
+                class: 'px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500',
+            },
+            {
+                text: 'Ya, Lanjutkan',
+                class: 'px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500',
+                action: onConfirm
+            }
+        ];
+        this._show(title, message, buttons);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    NotificationDialog.init();
+});
+</script>
+{{end}}

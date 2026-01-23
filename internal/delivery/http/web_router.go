@@ -216,6 +216,8 @@ func InitWebRouter(router *gin.Engine, webHandler *WebHandler) {
 		{
 			student.GET("/dashboard", webHandler.StudentDashboard)
 			student.GET("/courses", webHandler.StudentCourses)
+			student.GET("/courses/:id", webHandler.StudentCourseDetail)
+			student.GET("/courses/:id/modules/:module_id", webHandler.StudentModuleViewer)
 			student.GET("/browse", webHandler.StudentBrowseCourses)
 			student.GET("/labs", webHandler.StudentLabs)
 			student.GET("/certificates", webHandler.StudentCertificates)

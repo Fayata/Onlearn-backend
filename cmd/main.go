@@ -40,6 +40,13 @@ func main() {
 	certRepo := repository.NewCertificateRepository(postgres)
 	moduleRepo := repository.NewModuleRepository(mongo)
 
+	// Initialize GridFS Repository for file storage
+	gridFSRepo, err := repository.NewGridFSRepository(mongo)
+	if err != nil {
+		log.Fatal("Failed to initialize GridFS:", err)
+	}
+	log.Println("✅ GridFS initialized successfully")
+
 	// ========== Initialize Usecases ==========
 	authUsecase := usecase.NewAuthUsecase(userRepo)
 
@@ -107,9 +114,12 @@ func main() {
 		dashboardUsecase,
 	)
 
+	fileHandler := httpDelivery.NewFileHandler(gridFSRepo)
+
 	// ========== Initialize Router ==========
 	router := httpDelivery.InitRouter(apiHandler)
 	httpDelivery.InitWebRouter(router, webHandler)
+	httpDelivery.InitFileRouter(router, fileHandler)
 
 	// Get port from environment or use default
 	port := os.Getenv("PORT")

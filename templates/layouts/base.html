@@ -28,9 +28,14 @@
             }
         }
     </script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body class="bg-slate-50">
     {{template "content" .}}
+
+    {{template "toast.html" .}}
+    {{template "notification_dialog.html" .}}
     
     <!-- Custom JS -->
     <script src="/static/js/app.js"></script>

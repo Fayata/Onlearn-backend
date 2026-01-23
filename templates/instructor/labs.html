@@ -21,6 +21,7 @@
     </script>
 </head>
 <body class="bg-gray-50">
+    {{template "toast.html" .}}
     <!-- Sidebar -->
     <div id="sidebar" class="fixed left-0 top-0 h-screen bg-slate-800 text-white transition-all duration-300 overflow-y-auto z-50" style="width: 250px;">
         <div class="flex items-center justify-between p-6 border-b border-gray-700">
@@ -56,17 +57,28 @@
         </nav>
 
         <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
-            <div class="flex items-center gap-3 cursor-pointer hover:bg-slate-700 rounded-lg p-2">
-                <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden">
-                    {{if .User.ProfilePicture}}
-                        <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
-                    {{else}}
-                        <i class="fas fa-user"></i>
-                    {{end}}
-                </div>
-                <div class="nav-text flex-1 overflow-hidden">
-                    <p class="font-semibold text-sm truncate">{{.User.Name}}</p>
-                    <p class="text-xs text-gray-400 capitalize">Instructor</p>
+            <div class="relative">
+                <button onclick="toggleInstructorDropdown()" id="instructorProfileBtn" class="w-full flex items-center gap-3 cursor-pointer hover:bg-slate-700 rounded-lg p-2">
+                    <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden">
+                        {{if .User.ProfilePicture}}
+                            <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
+                        {{else}}
+                            <i class="fas fa-user"></i>
+                        {{end}}
+                    </div>
+                    <div class="nav-text flex-1 overflow-hidden text-left">
+                        <p class="font-semibold text-sm truncate">{{.User.Name}}</p>
+                        <p class="text-xs text-gray-400 capitalize">Instructor</p>
+                    </div>
+                    <i class="fas fa-chevron-up nav-text text-gray-400 text-xs"></i>
+                </button>
+                
+                <!-- Dropdown Menu -->
+                <div id="instructorDropdown" class="hidden absolute bottom-full left-0 right-0 mb-2 bg-slate-700 rounded-lg shadow-lg border border-slate-600 py-2">
+                    <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-red-400 hover:bg-slate-600 transition-colors">
+                        <i class="fas fa-sign-out-alt w-5"></i>
+                        <span>Logout</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -305,6 +317,20 @@
             }
         }
 
+        function toggleInstructorDropdown() {
+            const dropdown = document.getElementById('instructorDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('instructorDropdown');
+            const button = document.getElementById('instructorProfileBtn');
+            if (dropdown && button && !dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
         function filterLabs(status) {
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white');
@@ -338,14 +364,29 @@
             document.getElementById('createLabForm').reset();
         }
 
+        // Helper function to convert datetime-local to RFC3339 format
+        function toRFC3339(datetimeLocal) {
+            if (!datetimeLocal) return '';
+            // datetime-local format: "2026-01-22T15:21"
+            // RFC3339 format: "2026-01-22T15:21:00+07:00"
+            // Add seconds and timezone
+            const date = new Date(datetimeLocal);
+            return date.toISOString();
+        }
+
         async function createLab(event) {
             event.preventDefault();
             const formData = new FormData(event.target);
+            
+            // Convert datetime-local to RFC3339 format
+            const startTime = toRFC3339(formData.get('start_time'));
+            const endTime = toRFC3339(formData.get('end_time'));
+            
             const data = {
                 title: formData.get('title'),
                 description: formData.get('description'),
-                start_time: formData.get('start_time'),
-                end_time: formData.get('end_time'),
+                start_time: startTime,
+                end_time: endTime,
                 status: formData.get('status') || 'scheduled'
             };
 
@@ -361,16 +402,16 @@
                 });
 
                 if (response.ok) {
-                    alert('Lab berhasil dibuat!');
+                    Toast.success('Lab berhasil dibuat!');
                     closeCreateLabModal();
-                    location.reload();
+                    setTimeout(() => location.reload(), 1500);
                 } else {
                     const error = await response.json();
-                    alert('Gagal membuat lab: ' + (error.error || 'Terjadi kesalahan'));
+                    Toast.error('Gagal membuat lab: ' + (error.error || 'Terjadi kesalahan'));
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Terjadi kesalahan koneksi');
+                Toast.error('Terjadi kesalahan koneksi');
             }
         }
 
@@ -389,11 +430,11 @@
                     document.getElementById('gradeModalTitle').textContent = `Nilai Students - Lab ID ${labId}`;
                     document.getElementById('gradeModal').classList.remove('hidden');
                 } else {
-                    alert('Gagal memuat data students');
+                    Toast.error('Gagal memuat data students');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Terjadi kesalahan koneksi');
+                Toast.error('Terjadi kesalahan koneksi');
             }
         }
 
@@ -441,7 +482,7 @@
             const feedback = document.getElementById(`feedback_${studentId}`).value;
 
             if (!grade) {
-                alert('Pilih nilai terlebih dahulu');
+                Toast.warning('Pilih nilai terlebih dahulu');
                 return;
             }
 
@@ -462,15 +503,15 @@
                 });
 
                 if (response.ok) {
-                    alert('Nilai berhasil disimpan!');
+                    Toast.success('Nilai berhasil disimpan!');
                     gradeStudents(labId); // Refresh list
                 } else {
                     const error = await response.json();
-                    alert('Gagal menyimpan nilai: ' + (error.error || 'Terjadi kesalahan'));
+                    Toast.error('Gagal menyimpan nilai: ' + (error.error || 'Terjadi kesalahan'));
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Terjadi kesalahan koneksi');
+                Toast.error('Terjadi kesalahan koneksi');
             }
         }
 
@@ -479,63 +520,67 @@
         }
 
         function viewLabStudents(labId) {
-            alert(`Lihat daftar students di lab ${labId}`);
+            Toast.info(`Melihat daftar students di lab ${labId}`);
         }
 
         async function changeLabStatus(labId, status) {
-            if (!confirm(`Yakin ingin mengubah status lab menjadi ${status}?`)) {
-                return;
-            }
+            NotificationDialog.confirm(
+                `Apakah Anda yakin ingin mengubah status lab menjadi <strong>${status}</strong>?`,
+                async () => {
+                    try {
+                        const token = getCookie('token');
+                        const response = await fetch(`/api/v1/instructor/labs/${labId}/status`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ status: status })
+                        });
 
-            try {
-                const token = getCookie('token');
-                const response = await fetch(`/api/v1/instructor/labs/${labId}/status`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ status: status })
-                });
-
-                if (response.ok) {
-                    alert(`Lab status berhasil diubah menjadi ${status}!`);
-                    location.reload();
-                } else {
-                    const error = await response.json();
-                    alert('Gagal mengubah status: ' + (error.error || 'Terjadi kesalahan'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Terjadi kesalahan koneksi');
-            }
+                        if (response.ok) {
+                            Toast.success(`Lab status berhasil diubah menjadi ${status}!`);
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            const error = await response.json();
+                            Toast.error('Gagal mengubah status: ' + (error.error || 'Terjadi kesalahan'));
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        Toast.error('Terjadi kesalahan koneksi');
+                    }
+                },
+                'Konfirmasi Ubah Status'
+            );
         }
 
         async function deleteLab(labId) {
-            if (!confirm('Yakin ingin menghapus lab ini? Semua data terkait akan dihapus.')) {
-                return;
-            }
+            NotificationDialog.confirm(
+                'Apakah Anda yakin ingin menghapus lab ini? Semua data terkait akan dihapus secara permanen.',
+                async () => {
+                    try {
+                        const token = getCookie('token');
+                        const response = await fetch(`/api/v1/instructor/labs/${labId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
 
-            try {
-                const token = getCookie('token');
-                const response = await fetch(`/api/v1/instructor/labs/${labId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+                        if (response.ok) {
+                            Toast.success('Lab berhasil dihapus!');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            const error = await response.json();
+                            Toast.error('Gagal menghapus lab: ' + (error.error || 'Terjadi kesalahan'));
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        Toast.error('Terjadi kesalahan koneksi');
                     }
-                });
-
-                if (response.ok) {
-                    alert('Lab berhasil dihapus!');
-                    location.reload();
-                } else {
-                    const error = await response.json();
-                    alert('Gagal menghapus lab: ' + (error.error || 'Terjadi kesalahan'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Terjadi kesalahan koneksi');
-            }
+                },
+                'Hapus Lab'
+            );
         }
 
         function getCookie(name) {

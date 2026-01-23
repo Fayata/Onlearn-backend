@@ -148,3 +148,22 @@ func InitRouter(handler *Handler) *gin.Engine {
 
 	return r
 }
+
+// InitFileRouter initializes file-related routes for GridFS
+func InitFileRouter(r *gin.Engine, fileHandler *FileHandler) {
+	// Public file streaming (for viewing PDFs and PPTs)
+	r.GET("/files/:id", fileHandler.StreamFile)
+	r.GET("/files/:id/info", fileHandler.GetFileInfo)
+
+	// Protected file operations
+	api := r.Group("/api/v1")
+	{
+		// File upload requires authentication
+		files := api.Group("/files")
+		files.Use(AuthMiddleware("student", "instructor", "admin"))
+		{
+			files.POST("/upload", fileHandler.UploadFile)
+			files.DELETE("/:id", fileHandler.DeleteFile)
+		}
+	}
+}

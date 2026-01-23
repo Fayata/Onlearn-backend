@@ -109,6 +109,7 @@ func (r *moduleRepo) Update(ctx context.Context, module *domain.Module) error {
 			"title":       module.Title,
 			"type":        module.Type,
 			"content_url": module.ContentURL,
+			"file_id":     module.FileID,
 			"quiz_link":   module.QuizLink,
 			"description": module.Description,
 			"order":       module.Order,

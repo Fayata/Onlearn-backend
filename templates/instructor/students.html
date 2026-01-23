@@ -56,17 +56,28 @@
         </nav>
 
         <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
-            <div class="flex items-center gap-3 cursor-pointer hover:bg-slate-700 rounded-lg p-2">
-                <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden">
-                    {{if .User.ProfilePicture}}
-                        <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
-                    {{else}}
-                        <i class="fas fa-user"></i>
-                    {{end}}
-                </div>
-                <div class="nav-text flex-1 overflow-hidden">
-                    <p class="font-semibold text-sm truncate">{{.User.Name}}</p>
-                    <p class="text-xs text-gray-400 capitalize">Instructor</p>
+            <div class="relative">
+                <button onclick="toggleInstructorDropdown()" id="instructorProfileBtn" class="w-full flex items-center gap-3 cursor-pointer hover:bg-slate-700 rounded-lg p-2">
+                    <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden">
+                        {{if .User.ProfilePicture}}
+                            <img src="{{.User.ProfilePicture}}" alt="Profile" class="w-full h-full object-cover">
+                        {{else}}
+                            <i class="fas fa-user"></i>
+                        {{end}}
+                    </div>
+                    <div class="nav-text flex-1 overflow-hidden text-left">
+                        <p class="font-semibold text-sm truncate">{{.User.Name}}</p>
+                        <p class="text-xs text-gray-400 capitalize">Instructor</p>
+                    </div>
+                    <i class="fas fa-chevron-up nav-text text-gray-400 text-xs"></i>
+                </button>
+                
+                <!-- Dropdown Menu -->
+                <div id="instructorDropdown" class="hidden absolute bottom-full left-0 right-0 mb-2 bg-slate-700 rounded-lg shadow-lg border border-slate-600 py-2">
+                    <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-red-400 hover:bg-slate-600 transition-colors">
+                        <i class="fas fa-sign-out-alt w-5"></i>
+                        <span>Logout</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -209,6 +220,20 @@
                 if(brandText) brandText.style.display = 'inline';
             }
         }
+
+        function toggleInstructorDropdown() {
+            const dropdown = document.getElementById('instructorDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('instructorDropdown');
+            const button = document.getElementById('instructorProfileBtn');
+            if (dropdown && button && !dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
 
         function filterByCourse(courseId) {
             document.querySelectorAll('.course-filter').forEach(btn => {

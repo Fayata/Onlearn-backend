@@ -79,7 +79,7 @@ func (h *WebHandler) LoginWeb(c *gin.Context) {
 	if email == "" || password == "" {
 		c.HTML(http.StatusOK, "auth/login.html", gin.H{
 			"error": "Email dan password wajib diisi.",
-			"email": email, 
+			"email": email, // Keep input
 		})
 		return
 	}
@@ -265,6 +265,151 @@ func (h *WebHandler) StudentCourses(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "student/courses.html", data)
+}
+
+func (h *WebHandler) StudentCourseDetail(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.Redirect(http.StatusFound, "/?error=Unauthorized")
+		return
+	}
+	userID := userIDVal.(uint)
+
+	// Get course ID from URL
+	courseIDStr := c.Param("id")
+	courseID, err := strconv.ParseUint(courseIDStr, 10, 32)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/student/courses?error=Invalid course ID")
+		return
+	}
+
+	// Get user data
+	user, err := h.AuthUsecase.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/?error=Unauthorized")
+		return
+	}
+
+	// Get course details with modules
+	courseDetail, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), uint(courseID), &userID)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/student/courses?error=Course not found")
+		return
+	}
+
+	// Get modules with progress
+	modulesWithProgress, err := h.CourseUsecase.GetModulesWithProgress(c.Request.Context(), userID, uint(courseID))
+	if err != nil {
+		modulesWithProgress = []domain.ModuleWithProgress{}
+	}
+
+	// Calculate progress
+	var completedModules int
+	for _, m := range modulesWithProgress {
+		if m.IsComplete {
+			completedModules++
+		}
+	}
+
+	totalModules := len(modulesWithProgress)
+	var progressPercent float64
+	if totalModules > 0 {
+		progressPercent = float64(completedModules) / float64(totalModules) * 100
+	}
+
+	data := gin.H{
+		"User":             user,
+		"Course":           courseDetail.Course,
+		"Modules":          modulesWithProgress,
+		"CompletedModules": completedModules,
+		"TotalModules":     totalModules,
+		"Progress":         int(progressPercent),
+		"IsEnrolled":       courseDetail.IsEnrolled,
+		"ActiveMenu":       "courses",
+		"Title":            courseDetail.Course.Title,
+		"PageTitle":        courseDetail.Course.Title,
+	}
+
+	c.HTML(http.StatusOK, "student/course_detail.html", data)
+}
+
+func (h *WebHandler) StudentModuleViewer(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.Redirect(http.StatusFound, "/?error=Unauthorized")
+		return
+	}
+	userID := userIDVal.(uint)
+
+	// Get course ID and module ID from URL
+	courseIDStr := c.Param("id")
+	moduleID := c.Param("module_id")
+
+	courseID, err := strconv.ParseUint(courseIDStr, 10, 32)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/student/courses?error=Invalid course ID")
+		return
+	}
+
+	// Get user data
+	user, err := h.AuthUsecase.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/?error=Unauthorized")
+		return
+	}
+
+	// Get course details
+	courseDetail, err := h.CourseUsecase.GetCourseDetails(c.Request.Context(), uint(courseID), &userID)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/student/courses?error=Course not found")
+		return
+	}
+
+	// Verify user is enrolled
+	if !courseDetail.IsEnrolled {
+		c.Redirect(http.StatusFound, "/student/browse?error=Anda belum terdaftar di kursus ini")
+		return
+	}
+
+	// Get module by ID
+	module, err := h.CourseUsecase.GetModuleByID(c.Request.Context(), moduleID)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/student/courses/"+courseIDStr+"?error=Module not found")
+		return
+	}
+
+	// Get module progress to check if complete
+	modulesWithProgress, err := h.CourseUsecase.GetModulesWithProgress(c.Request.Context(), userID, uint(courseID))
+	var isComplete bool
+	for _, m := range modulesWithProgress {
+		if m.ID == moduleID {
+			isComplete = m.IsComplete
+			break
+		}
+	}
+
+	// Determine file URL (support both GridFS and legacy file paths)
+	var fileURL string
+	if module.FileID != "" {
+		// File stored in GridFS
+		fileURL = "/files/" + module.FileID
+	} else if module.ContentURL != "" {
+		// Legacy file path
+		fileURL = module.ContentURL
+	}
+
+	data := gin.H{
+		"User":       user,
+		"Course":     courseDetail.Course,
+		"Module":     module,
+		"FileURL":    fileURL,
+		"IsComplete": isComplete,
+		"ActiveMenu": "courses",
+		"Title":      module.Title,
+		"PageTitle":  module.Title,
+	}
+
+	c.HTML(http.StatusOK, "student/module_viewer.html", data)
 }
 
 // ========== INSTRUCTOR HANDLERS ==========

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Course.Title}} | OnLearn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        sidebar: '#1e293b',
+                        'sidebar-hover': '#334155',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+        .module-card {
+            transition: all 0.3s ease;
+        }
+        .module-card:hover {
+            transform: translateX(8px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    {{template "toast.html" .}}
+    {{template "sidebar.html" .}}
+    {{template "header.html" .}}
+
+    <div id="mainContent" class="transition-all duration-300" style="margin-left: 250px;">
+        <div style="margin-top: 80px;" class="p-8">
+            <!-- Back Button & Header -->
+            <div class="mb-6">
+                <a href="/student/courses" class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Kembali ke Daftar Kursus</span>
+                </a>
+            </div>
+
+            <!-- Course Header Card -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white mb-8 shadow-lg animate-slide-in">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h1 class="text-3xl font-bold mb-3">{{.Course.Title}}</h1>
+                        <p class="text-blue-100 mb-6 max-w-2xl">{{.Course.Description}}</p>
+                        
+                        <!-- Progress Bar -->
+                        <div class="bg-white/20 rounded-full h-3 w-full max-w-md mb-2">
+                            <div class="bg-white rounded-full h-3 transition-all duration-500" style="width: {{.Progress}}%"></div>
+                        </div>
+                        <p class="text-sm text-blue-100">
+                            <span class="font-semibold text-white">{{.CompletedModules}}</span> dari <span class="font-semibold text-white">{{.TotalModules}}</span> modul selesai ({{.Progress}}%)
+                        </p>
+                    </div>
+                    
+                    {{if .Course.Thumbnail}}
+                    <div class="hidden md:block ml-8">
+                        <img src="{{.Course.Thumbnail}}" alt="{{.Course.Title}}" class="w-48 h-32 object-cover rounded-xl shadow-lg">
+                    </div>
+                    {{else}}
+                    <div class="hidden md:block ml-8">
+                        <div class="w-48 h-32 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-book text-4xl text-white/50"></i>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+
+            <!-- Modules Section -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <i class="fas fa-list-ul text-blue-600"></i>
+                    Daftar Modul
+                </h2>
+
+                {{if .Modules}}
+                <div class="space-y-4">
+                    {{range $index, $module := .Modules}}
+                    <div class="module-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-slide-in" style="animation-delay: {{mul $index 0.1}}s">
+                        <div class="flex items-center">
+                            <!-- Module Number & Status -->
+                            <div class="w-20 h-full flex-shrink-0 flex items-center justify-center 
+                                {{if $module.IsComplete}}bg-green-500{{else}}bg-gray-200{{end}} p-6">
+                                {{if $module.IsComplete}}
+                                <i class="fas fa-check text-white text-2xl"></i>
+                                {{else}}
+                                <span class="text-2xl font-bold text-gray-500">{{add $index 1}}</span>
+                                {{end}}
+                            </div>
+                            
+                            <!-- Module Info -->
+                            <div class="flex-1 p-6">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-800 mb-1">{{$module.Title}}</h3>
+                                        <p class="text-sm text-gray-500 mb-2">{{$module.Description}}</p>
+                                        <div class="flex items-center gap-4">
+                                            <!-- Module Type Badge -->
+                                            {{if eq $module.Type "pdf"}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-file-pdf"></i>
+                                                PDF
+                                            </span>
+                                            {{else if eq $module.Type "ppt"}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-file-powerpoint"></i>
+                                                Presentasi
+                                            </span>
+                                            {{end}}
+                                            
+                                            <!-- Quiz Link Badge -->
+                                            {{if $module.QuizLink}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-clipboard-question"></i>
+                                                Ada Quiz
+                                            </span>
+                                            {{end}}
+                                            
+                                            <!-- Status Badge -->
+                                            {{if $module.IsComplete}}
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                                                <i class="fas fa-check-circle"></i>
+                                                Selesai
+                                            </span>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Button -->
+                                    <div class="flex items-center gap-3">
+                                        {{if or $module.ContentURL $module.FileID}}
+                                        <a href="/student/courses/{{$.Course.ID}}/modules/{{$module.ID}}" 
+                                           class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                                            {{if $module.IsComplete}}
+                                            <i class="fas fa-redo"></i>
+                                            Lihat Lagi
+                                            {{else}}
+                                            <i class="fas fa-play"></i>
+                                            Mulai Belajar
+                                            {{end}}
+                                        </a>
+                                        {{end}}
+                                        
+                                        {{if $module.QuizLink}}
+                                        <a href="{{$module.QuizLink}}" target="_blank"
+                                           class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            Kerjakan Quiz
+                                        </a>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+                {{else}}
+                <div class="bg-white rounded-2xl shadow-sm p-12 text-center">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-folder-open text-gray-400 text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Belum Ada Modul</h3>
+                    <p class="text-gray-500">Instructor belum menambahkan modul untuk kursus ini.</p>
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Course Completion Card -->
+            {{if eq .Progress 100}}
+            <div class="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 text-white shadow-lg animate-slide-in">
+                <div class="flex items-center gap-6">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-trophy text-4xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold mb-2">Selamat! Kursus Selesai! 🎉</h3>
+                        <p class="text-green-100">Anda telah menyelesaikan semua modul dalam kursus ini. Sertifikat Anda sedang diproses.</p>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <script>
+        let sidebarCollapsed = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const navTexts = document.querySelectorAll('.nav-text');
+            const brandText = document.getElementById('brandText');
+            sidebarCollapsed = !sidebarCollapsed;
+            if (sidebarCollapsed) {
+                sidebar.style.width = '80px';
+                mainContent.style.marginLeft = '80px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'none');
+                if(brandText) brandText.style.display = 'none';
+            } else {
+                sidebar.style.width = '250px';
+                mainContent.style.marginLeft = '250px';
+                if(navTexts) navTexts.forEach(text => text.style.display = 'inline');
+                if(brandText) brandText.style.display = 'inline';
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('profileDropdown');
+            const button = document.getElementById('profileButton');
+            if (dropdown && button && !dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
