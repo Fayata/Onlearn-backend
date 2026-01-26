@@ -124,7 +124,7 @@
                 <div class="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all overflow-hidden flex flex-col h-full">
                     <div class="h-48 bg-gradient-to-br {{$bgGradient}} relative">
                         {{if .Thumbnail}}
-                            <img src="{{.Thumbnail}}" alt="{{.Title}}" class="w-full h-full object-cover">
+                            <img src="{{thumbnailURL .Thumbnail}}" alt="{{.Title}}" class="w-full h-full object-cover" onerror="this.style.display='none'">
                         {{end}}
                         <div class="absolute top-4 right-4 flex gap-2">
                             <button onclick="openEditCourseModal({{.ID}})" class="p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30">
@@ -137,7 +137,18 @@
                     </div>
 
                     <div class="p-6 flex flex-col flex-1">
-                        <h3 class="text-xl font-bold text-gray-800 mb-2 line-clamp-2">{{.Title}}</h3>
+                        <div class="flex items-start justify-between mb-2">
+                            <h3 class="text-xl font-bold text-gray-800 line-clamp-2 flex-1">{{.Title}}</h3>
+                            {{if eq .IsPublished true}}
+                            <span class="ml-2 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full whitespace-nowrap">
+                                <i class="fas fa-check-circle"></i> Published
+                            </span>
+                            {{else}}
+                            <span class="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full whitespace-nowrap">
+                                <i class="fas fa-clock"></i> Draft
+                            </span>
+                            {{end}}
+                        </div>
                         <p class="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">{{.Description}}</p>
                         
                         <div class="flex gap-2 mt-auto">

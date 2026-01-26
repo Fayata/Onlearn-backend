@@ -18,13 +18,9 @@ import (
 )
 
 const (
-	// MaxFileSize adalah batas maksimal ukuran file (16MB untuk GridFS chunk optimal)
-	MaxFileSize = 16 * 1024 * 1024 // 16MB
-	// MaxLargeFileSize untuk file yang lebih besar (50MB)
-	MaxLargeFileSize = 50 * 1024 * 1024 // 50MB
+	MaxFileSize = 16 * 1024 * 1024
+	MaxLargeFileSize = 50 * 1024 * 1024 
 )
-
-// FileInfo menyimpan metadata file yang diupload
 type FileInfo struct {
 	ID          string    `json:"id" bson:"_id"`
 	Filename    string    `json:"filename" bson:"filename"`
@@ -34,7 +30,6 @@ type FileInfo struct {
 	Metadata    FileMetadata `json:"metadata" bson:"metadata"`
 }
 
-// FileMetadata menyimpan metadata tambahan
 type FileMetadata struct {
 	OriginalName string `json:"original_name" bson:"original_name"`
 	UploadedBy   uint   `json:"uploaded_by" bson:"uploaded_by"`
@@ -43,7 +38,6 @@ type FileMetadata struct {
 	ModuleID     string `json:"module_id,omitempty" bson:"module_id,omitempty"`
 }
 
-// GridFSRepository interface untuk operasi file
 type GridFSRepository interface {
 	Upload(ctx context.Context, file multipart.File, header *multipart.FileHeader, metadata FileMetadata) (*FileInfo, error)
 	Download(ctx context.Context, fileID string) (io.ReadCloser, *FileInfo, error)
@@ -56,7 +50,6 @@ type gridFSRepo struct {
 	bucket *gridfs.Bucket
 }
 
-// NewGridFSRepository membuat instance baru GridFS repository
 func NewGridFSRepository(db *mongo.Database) (GridFSRepository, error) {
 	bucket, err := gridfs.NewBucket(db, options.GridFSBucket().SetName("uploads"))
 	if err != nil {
@@ -116,20 +109,17 @@ func (r *gridFSRepo) Upload(ctx context.Context, file multipart.File, header *mu
 	}, nil
 }
 
-// Download mengunduh file dari GridFS
 func (r *gridFSRepo) Download(ctx context.Context, fileID string) (io.ReadCloser, *FileInfo, error) {
 	objectID, err := primitive.ObjectIDFromHex(fileID)
 	if err != nil {
 		return nil, nil, errors.New("invalid file ID")
 	}
 
-	// Get file info first
 	fileInfo, err := r.GetFileInfo(ctx, fileID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Open download stream
 	stream, err := r.bucket.OpenDownloadStream(objectID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("file tidak ditemukan: %w", err)
@@ -138,7 +128,6 @@ func (r *gridFSRepo) Download(ctx context.Context, fileID string) (io.ReadCloser
 	return stream, fileInfo, nil
 }
 
-// Delete menghapus file dari GridFS
 func (r *gridFSRepo) Delete(ctx context.Context, fileID string) error {
 	objectID, err := primitive.ObjectIDFromHex(fileID)
 	if err != nil {
@@ -153,7 +142,6 @@ func (r *gridFSRepo) Delete(ctx context.Context, fileID string) error {
 	return nil
 }
 
-// GetFileInfo mendapatkan informasi file
 func (r *gridFSRepo) GetFileInfo(ctx context.Context, fileID string) (*FileInfo, error) {
 	objectID, err := primitive.ObjectIDFromHex(fileID)
 	if err != nil {
@@ -224,7 +212,6 @@ func (r *gridFSRepo) GetFileInfo(ctx context.Context, fileID string) (*FileInfo,
 }
 
 // Helper functions
-
 func detectContentType(filename string) string {
 	ext := strings.ToLower(filepath.Ext(filename))
 	switch ext {

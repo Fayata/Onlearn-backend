@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"onlearn-backend/internal/domain"
 	"onlearn-backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -11,12 +12,18 @@ import (
 
 // FileHandler handles file operations with GridFS
 type FileHandler struct {
-	gridFS repository.GridFSRepository
+	gridFS       repository.GridFSRepository
+	courseUsecase domain.CourseUsecase
 }
 
 // NewFileHandler creates a new FileHandler
 func NewFileHandler(gridFS repository.GridFSRepository) *FileHandler {
 	return &FileHandler{gridFS: gridFS}
+}
+
+// SetCourseUsecase sets the course usecase for enrollment verification
+func (h *FileHandler) SetCourseUsecase(cu domain.CourseUsecase) {
+	h.courseUsecase = cu
 }
 
 // UploadFile handles file upload to GridFS
@@ -64,7 +71,7 @@ func (h *FileHandler) UploadFile(c *gin.Context) {
 	})
 }
 
-// StreamFile streams a file from GridFS
+// StreamFile streams a file from GridFS (public, no auth - deprecated for security)
 func (h *FileHandler) StreamFile(c *gin.Context) {
 	fileID := c.Param("id")
 	if fileID == "" {
@@ -95,6 +102,83 @@ func (h *FileHandler) StreamFile(c *gin.Context) {
 	// Enable CORS for viewer
 	c.Header("Access-Control-Allow-Origin", "*")
 	c.Header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length")
+
+	// Stream the file
+	c.Status(http.StatusOK)
+	_, err = io.Copy(c.Writer, stream)
+	if err != nil {
+		// Log error but don't send response since headers are already sent
+		fmt.Printf("Error streaming file: %v\n", err)
+	}
+}
+
+// StreamFileProtected streams a file from GridFS with enrollment verification
+func (h *FileHandler) StreamFileProtected(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(uint)
+
+	fileID := c.Param("id")
+	if fileID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File ID is required"})
+		return
+	}
+
+	// Get file info to check course_id
+	fileInfo, err := h.gridFS.GetFileInfo(c.Request.Context(), fileID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+		return
+	}
+
+	// Verify enrollment if file is associated with a course
+	if fileInfo.Metadata.CourseID > 0 && h.courseUsecase != nil {
+		// Check user role first
+		roleVal, exists := c.Get("role")
+		role := ""
+		if exists {
+			role = roleVal.(string)
+		}
+
+		// Instructors and admins have full access
+		if role != "instructor" && role != "admin" {
+			// For students, verify enrollment
+			courseDetail, err := h.courseUsecase.GetCourseDetails(c.Request.Context(), fileInfo.Metadata.CourseID, &userID)
+			if err != nil || !courseDetail.IsEnrolled {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied. You must be enrolled in this course."})
+				return
+			}
+		}
+	}
+
+	// Download and stream the file
+	stream, _, err := h.gridFS.Download(c.Request.Context(), fileID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	defer stream.Close()
+
+	// Set headers for streaming
+	c.Header("Content-Type", fileInfo.ContentType)
+	c.Header("Content-Length", fmt.Sprintf("%d", fileInfo.Size))
+	
+	// For PDF and PPT, allow inline viewing
+	if fileInfo.ContentType == "application/pdf" ||
+		fileInfo.ContentType == "application/vnd.ms-powerpoint" ||
+		fileInfo.ContentType == "application/vnd.openxmlformats-officedocument.presentationml.presentation" {
+		c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", fileInfo.Metadata.OriginalName))
+	} else {
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileInfo.Metadata.OriginalName))
+	}
+
+	// Enable CORS for viewer
+	c.Header("Access-Control-Allow-Origin", "*")
+	c.Header("Access-Control-Allow-Credentials", "true")
+	c.Header("Access-Control-Expose-Headers", "Content-Disposition, Content-Length, Content-Type")
 
 	// Stream the file
 	c.Status(http.StatusOK)

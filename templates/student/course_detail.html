@@ -67,7 +67,7 @@
                     
                     {{if .Course.Thumbnail}}
                     <div class="hidden md:block ml-8">
-                        <img src="{{.Course.Thumbnail}}" alt="{{.Course.Title}}" class="w-48 h-32 object-cover rounded-xl shadow-lg">
+                        <img src="{{thumbnailURL .Course.Thumbnail}}" alt="{{.Course.Title}}" class="w-48 h-32 object-cover rounded-xl shadow-lg" onerror="this.style.display='none'">
                     </div>
                     {{else}}
                     <div class="hidden md:block ml-8">

@@ -11,6 +11,8 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
+    <!-- JSZip for PPTX parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         .viewer-container {
             height: calc(100vh - 140px);
@@ -48,6 +50,10 @@
             align-items: center;
             padding: 20px;
             background: #f3f4f6;
+            min-height: 600px;
+        }
+        #pdfViewer.hidden {
+            display: none !important;
         }
         .loading-spinner {
             border: 4px solid #f3f3f3;
@@ -115,14 +121,13 @@
             </div>
         </div>
 
-        {{if eq .Module.Type "pdf"}}
-        <!-- PDF Viewer -->
-        <div id="pdfViewer" class="w-full h-full hidden">
+        <!-- PDF Viewer (always in DOM, shown/hidden based on type) -->
+        <div id="pdfViewer" class="w-full h-full" style="overflow-y: auto; display: {{if eq .Module.Type "pdf"}}flex{{else}}none{{end}}; flex-direction: column; align-items: center; padding: 20px; background: #f3f4f6;">
             <!-- PDF pages will be rendered here -->
         </div>
         
-        <!-- PDF Controls -->
-        <div id="pdfControls" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-full px-6 py-3 shadow-lg flex items-center gap-4 hidden">
+        <!-- PDF Controls (always in DOM, shown/hidden based on type) -->
+        <div id="pdfControls" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-full px-6 py-3 shadow-lg flex items-center gap-4" style="display: {{if eq .Module.Type "pdf"}}flex{{else}}none{{end}};">
             <button onclick="zoomOut()" class="control-btn text-white hover:text-blue-400">
                 <i class="fas fa-search-minus text-lg"></i>
             </button>
@@ -131,11 +136,11 @@
                 <i class="fas fa-search-plus text-lg"></i>
             </button>
             <div class="w-px h-6 bg-gray-600"></div>
-            <span id="pageInfo" class="text-white text-sm">Page 1 / 1</span>
+            <span id="pageInfo" class="text-white text-sm">Halaman 1 / 1</span>
         </div>
-        {{else}}
-        <!-- PPT/Slide Viewer -->
-        <div id="pptViewer" class="slide-container hidden">
+        
+        <!-- PPT/Slide Viewer (always in DOM, shown/hidden based on type) -->
+        <div id="pptViewer" class="slide-container" style="display: {{if eq .Module.Type "ppt"}}flex{{else}}none{{end}};">
             <div class="relative w-full max-w-5xl">
                 <!-- Slide Display -->
                 <div id="slideDisplay" class="bg-white rounded-lg shadow-2xl overflow-hidden aspect-video flex items-center justify-center">
@@ -156,8 +161,8 @@
             </div>
         </div>
         
-        <!-- PPT Controls -->
-        <div id="pptControls" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-full px-6 py-3 shadow-lg flex items-center gap-4 hidden">
+        <!-- PPT Controls (always in DOM, shown/hidden based on type) -->
+        <div id="pptControls" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 rounded-full px-6 py-3 shadow-lg flex items-center gap-4" style="display: {{if eq .Module.Type "ppt"}}flex{{else}}none{{end}};">
             <button onclick="prevSlide()" class="control-btn text-white hover:text-blue-400">
                 <i class="fas fa-step-backward text-lg"></i>
             </button>
@@ -170,7 +175,6 @@
                 <i class="fas fa-expand text-lg"></i>
             </button>
         </div>
-        {{end}}
 
         <!-- Fallback Download Message -->
         <div id="fallbackMessage" class="absolute inset-0 flex items-center justify-center bg-gray-900 hidden">
@@ -198,24 +202,112 @@
         let totalSlides = 1;
         let slideImages = [];
 
-        document.addEventListener('DOMContentLoaded', function() {
-            if (moduleType === 'pdf') {
-                loadPDF();
-            } else if (moduleType === 'ppt') {
-                loadPPT();
-            } else {
-                showFallback();
+        // Get authentication token from cookie
+        function getAuthToken() {
+            return getCookie('token');
+        }
+
+        // Get file URL with authentication
+        function getAuthenticatedFileURL() {
+            const token = getAuthToken();
+            if (!token) {
+                console.error('No authentication token found');
+                return fileURL;
             }
+            // Add token as query parameter or use fetch with headers
+            // For PDF.js and iframe, we'll use a blob URL approach
+            return fileURL;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait a bit to ensure all elements are loaded
+            setTimeout(() => {
+                // Verify elements exist before loading
+                // Elements should always be in DOM now (just hidden/shown)
+                if (moduleType === 'pdf') {
+                    const pdfViewer = document.getElementById('pdfViewer');
+                    if (!pdfViewer) {
+                        console.error('PDF viewer element not found in DOM');
+                        console.log('Module type:', moduleType);
+                        console.log('Available elements:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
+                        showFallback();
+                        return;
+                    }
+                    // Ensure PDF viewer is visible
+                    pdfViewer.style.display = 'flex';
+                    loadPDF();
+                } else if (moduleType === 'ppt') {
+                    const pptViewer = document.getElementById('pptViewer');
+                    if (!pptViewer) {
+                        console.error('PPT viewer element not found in DOM');
+                        showFallback();
+                        return;
+                    }
+                    // Ensure PPT viewer is visible
+                    pptViewer.style.display = 'flex';
+                    loadPPT();
+                } else {
+                    console.warn('Unknown module type:', moduleType);
+                    showFallback();
+                }
+            }, 200);
         });
 
         // ========== PDF Functions ==========
         async function loadPDF() {
             try {
-                const loadingTask = pdfjsLib.getDocument(fileURL);
+                const token = getAuthToken();
+                if (!token) {
+                    Toast.error('Token autentikasi tidak ditemukan. Silakan login ulang.');
+                    showFallback();
+                    return;
+                }
+
+                // Fetch PDF as blob with authentication
+                const response = await fetch(fileURL, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('PDF fetch error:', response.status, errorText);
+                    throw new Error(`Failed to load PDF: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                
+                // Verify it's a PDF
+                if (!blob.type.includes('pdf') && blob.size > 0) {
+                    console.warn('File mungkin bukan PDF, tetapi akan dicoba render');
+                }
+
+                // Convert blob to ArrayBuffer for PDF.js
+                const arrayBuffer = await blob.arrayBuffer();
+                
+                // Load PDF from ArrayBuffer using PDF.js
+                const loadingTask = pdfjsLib.getDocument({
+                    data: arrayBuffer,
+                    verbosity: 0 // Suppress warnings
+                });
+                
                 pdfDoc = await loadingTask.promise;
                 
+                // Double check element exists
                 const viewer = document.getElementById('pdfViewer');
+                if (!viewer) {
+                    console.error('PDF viewer element not found after PDF loaded');
+                    console.log('Available elements:', document.querySelectorAll('[id*="pdf"]'));
+                    showFallback();
+                    return;
+                }
+                
+                // Clear and show viewer
                 viewer.innerHTML = '';
+                viewer.style.display = 'flex';
                 
                 // Render all pages
                 for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
@@ -237,14 +329,86 @@
                     viewer.appendChild(canvas);
                 }
                 
-                document.getElementById('pageInfo').textContent = `${pdfDoc.numPages} halaman`;
+                const pageInfoEl = document.getElementById('pageInfo');
+                if (pageInfoEl) {
+                    pageInfoEl.textContent = `Halaman 1 / ${pdfDoc.numPages}`;
+                }
+                
                 hideLoading();
-                document.getElementById('pdfViewer').classList.remove('hidden');
-                document.getElementById('pdfControls').classList.remove('hidden');
+                
+                const pdfViewerEl = document.getElementById('pdfViewer');
+                const pdfControlsEl = document.getElementById('pdfControls');
+                
+                if (pdfViewerEl) {
+                    pdfViewerEl.style.display = 'flex';
+                }
+                if (pdfControlsEl) {
+                    pdfControlsEl.style.display = 'flex';
+                }
+                
+                Toast.success('PDF berhasil dimuat');
             } catch (error) {
                 console.error('Error loading PDF:', error);
-                showFallback();
+                Toast.warning('Gagal memuat PDF dengan PDF.js. Mencoba metode alternatif...');
+                // Try alternative: iframe with blob
+                tryAlternativePDFViewer();
             }
+        }
+
+        function tryAlternativePDFViewer() {
+            const token = getAuthToken();
+            if (!token) {
+                showFallback();
+                return;
+            }
+
+            // Create a temporary iframe with blob URL
+            fetch(fileURL, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.blob();
+            })
+            .then(blob => {
+                const blobURL = URL.createObjectURL(blob);
+                const viewer = document.getElementById('pdfViewer');
+                
+                if (!viewer) {
+                    console.error('PDF viewer element not found in tryAlternativePDFViewer');
+                    URL.revokeObjectURL(blobURL);
+                    showFallback();
+                    return;
+                }
+                
+                viewer.innerHTML = `
+                    <iframe src="${blobURL}#toolbar=1" 
+                            class="w-full h-full" 
+                            style="border: none; min-height: 600px;"
+                            type="application/pdf">
+                    </iframe>
+                `;
+                
+                hideLoading();
+                
+                // Show viewer and hide controls
+                viewer.style.display = 'flex';
+                const pdfControlsEl = document.getElementById('pdfControls');
+                if (pdfControlsEl) {
+                    pdfControlsEl.style.display = 'none';
+                }
+                
+                Toast.info('PDF dimuat menggunakan viewer browser');
+            })
+            .catch(error => {
+                console.error('Error loading PDF in iframe:', error);
+                Toast.error('Gagal memuat PDF');
+                showFallback();
+            });
         }
 
         function zoomIn() {
@@ -266,78 +430,367 @@
         // ========== PPT Functions ==========
         async function loadPPT() {
             try {
+                const token = getAuthToken();
+                if (!token) {
+                    throw new Error('No authentication token');
+                }
+
+                // Fetch PPT file as blob
+                const response = await fetch(fileURL, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load PPT: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                
+                // Try to extract and display slides from PPTX
+                await renderPPTXSlides(blob);
+                
+            } catch (error) {
+                console.error('Error loading PPT:', error);
+                Toast.error('Gagal memuat presentasi. Mencoba metode alternatif...');
+                // Fallback: use iframe with blob
+                tryPPTIframe();
+            }
+        }
+
+        async function renderPPTXSlides(blob) {
+            try {
+                const slideDisplay = document.getElementById('slideDisplay');
+                slideDisplay.innerHTML = '<div class="text-center p-8"><div class="loading-spinner mx-auto mb-4"></div><p class="text-gray-600">Memproses slide presentasi...</p></div>';
+
+                const arrayBuffer = await blob.arrayBuffer();
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                
+                // Get all slide files
+                const slideFiles = [];
+                zip.forEach((relativePath) => {
+                    if (relativePath.startsWith('ppt/slides/slide') && relativePath.endsWith('.xml')) {
+                        slideFiles.push(relativePath);
+                    }
+                });
+
+                slideFiles.sort((a, b) => {
+                    const numA = parseInt(a.match(/slide(\d+)/)?.[1] || '0');
+                    const numB = parseInt(b.match(/slide(\d+)/)?.[1] || '0');
+                    return numA - numB;
+                });
+
+                totalSlides = slideFiles.length;
+                currentSlide = 1;
+                slideImages = [];
+
+                // Extract images from each slide
+                for (const slidePath of slideFiles) {
+                    try {
+                        // Get slide number to find relationship file
+                        // We'll use the relationships file which is more reliable than parsing slide XML
+                        const slideNum = slidePath.match(/slide(\d+)/)?.[1];
+                        if (slideNum) {
+                            const relPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
+                            const relFile = zip.file(relPath);
+                            if (relFile) {
+                                const relXml = await relFile.async('string');
+                                const parser = new DOMParser();
+                                const relDoc = parser.parseFromString(relXml, 'text/xml');
+                                
+                                // Get all Relationship elements using getElementsByTagName
+                                const relationships = relDoc.getElementsByTagName('Relationship');
+                                
+                                for (let i = 0; i < relationships.length; i++) {
+                                    const rel = relationships[i];
+                                    const target = rel.getAttribute('Target');
+                                    const type = rel.getAttribute('Type');
+                                    
+                                    // Check if it's an image relationship (media files)
+                                    if (target && target.includes('media/')) {
+                                        // Handle relative paths - relationships use ../media/
+                                        let imagePath = target.startsWith('../') 
+                                            ? target.replace('../', 'ppt/') 
+                                            : `ppt/${target}`;
+                                        
+                                        // Try to find the image file
+                                        const imageFile = zip.file(imagePath);
+                                        if (imageFile) {
+                                            try {
+                                                const imageBlob = await imageFile.async('blob');
+                                                const imageUrl = URL.createObjectURL(imageBlob);
+                                                slideImages.push(imageUrl);
+                                                break; // Use first image found for this slide
+                                            } catch (imgError) {
+                                                console.warn(`Error loading image from ${imagePath}:`, imgError);
+                                            }
+                                        } else {
+                                            // Try alternative path
+                                            const altPath = `ppt/media/${target.split('/').pop()}`;
+                                            const altFile = zip.file(altPath);
+                                            if (altFile) {
+                                                try {
+                                                    const imageBlob = await altFile.async('blob');
+                                                    const imageUrl = URL.createObjectURL(imageBlob);
+                                                    slideImages.push(imageUrl);
+                                                    break;
+                                                } catch (imgError) {
+                                                    console.warn(`Error loading image from ${altPath}:`, imgError);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // If no image found for this slide, try to get from media folder directly
+                        // This is a fallback method
+                        if (slideImages.length <= slideFiles.indexOf(slidePath)) {
+                            // Get all media files
+                            const mediaFiles = [];
+                            zip.forEach((path) => {
+                                if (path.startsWith('ppt/media/')) {
+                                    mediaFiles.push(path);
+                                }
+                            });
+                            
+                            // Sort media files to match slide order
+                            mediaFiles.sort();
+                            
+                            const slideIndex = slideFiles.indexOf(slidePath);
+                            if (mediaFiles.length > slideIndex) {
+                                const mediaFile = zip.file(mediaFiles[slideIndex]);
+                                if (mediaFile) {
+                                    try {
+                                        const imageBlob = await mediaFile.async('blob');
+                                        const imageUrl = URL.createObjectURL(imageBlob);
+                                        slideImages.push(imageUrl);
+                                    } catch (mediaError) {
+                                        console.warn(`Error loading media file ${mediaFiles[slideIndex]}:`, mediaError);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (slideError) {
+                        console.warn(`Error processing slide ${slidePath}:`, slideError);
+                    }
+                }
+
+                // If we have slides, display them
+                if (slideImages.length > 0 && slideImages.length >= totalSlides) {
+                    totalSlides = slideImages.length;
+                    currentSlide = 1;
+                    updateSlideDisplay();
+                    hideLoading();
+                    const pptViewer = document.getElementById('pptViewer');
+                    const pptControls = document.getElementById('pptControls');
+                    if (pptViewer) pptViewer.classList.remove('hidden');
+                    if (pptControls) pptControls.classList.remove('hidden');
+                } else {
+                    // If we got some images but not all, still try to show them
+                    if (slideImages.length > 0) {
+                        totalSlides = slideImages.length;
+                        currentSlide = 1;
+                        updateSlideDisplay();
+                        hideLoading();
+                        const pptViewer = document.getElementById('pptViewer');
+                        const pptControls = document.getElementById('pptControls');
+                        if (pptViewer) pptViewer.classList.remove('hidden');
+                        if (pptControls) pptControls.classList.remove('hidden');
+                        Toast.warning(`Hanya ${slideImages.length} dari ${totalSlides} slide yang berhasil dimuat`);
+                    } else {
+                        // Fallback: use iframe with blob
+                        tryPPTIframe();
+                    }
+                }
+            } catch (error) {
+                console.error('Error rendering PPTX slides:', error);
+                // Fallback to iframe
+                tryPPTIframe();
+            }
+        }
+
+        function tryPPTIframe() {
+            const token = getAuthToken();
+            if (!token) {
+                showPPTFallback();
+                return;
+            }
+
+            // Fetch and create blob URL for iframe
+            fetch(fileURL, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.blob();
+            })
+            .then(blob => {
+                const blobURL = URL.createObjectURL(blob);
                 const slideDisplay = document.getElementById('slideDisplay');
                 
-                // Use Microsoft Office Online viewer for PPTX files
-                const encodedURL = encodeURIComponent(window.location.origin + fileURL);
+                // Create iframe to display PPT
+                // Note: Browsers can't display PPT directly, so we'll show a message
+                // with option to view in external viewer
+                slideDisplay.innerHTML = `
+                    <div class="text-center p-8 bg-white rounded-lg">
+                        <i class="fas fa-file-powerpoint text-6xl text-orange-500 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Presentasi PowerPoint</h3>
+                        <p class="text-gray-600 mb-6">Browser tidak dapat menampilkan file PPT secara langsung. Gunakan opsi di bawah untuk melihat presentasi.</p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                            <button onclick="viewPPTInNewTab()" 
+                                    class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2">
+                                <i class="fas fa-eye"></i>
+                                Lihat Presentasi
+                            </button>
+                        </div>
+                        <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                            <p class="text-sm text-gray-700">
+                                <i class="fas fa-info-circle text-blue-600"></i>
+                                Klik tombol di atas untuk membuka presentasi di tab baru. Setelah melihat, klik tombol <strong>"Tandai Selesai"</strong> di atas.
+                            </p>
+                        </div>
+                    </div>
+                `;
                 
-                const iframe = document.createElement('iframe');
-                iframe.src = `https://view.officeapps.live.com/op/embed.aspx?src=${encodedURL}`;
-                iframe.className = 'w-full h-full';
-                iframe.style.border = 'none';
-                iframe.style.minHeight = '500px';
-                iframe.setAttribute('allowfullscreen', 'true');
-                
-                slideDisplay.innerHTML = '';
-                slideDisplay.appendChild(iframe);
+                // Store blob URL for later use
+                window.pptBlobURL = blobURL;
                 
                 hideLoading();
                 document.getElementById('pptViewer').classList.remove('hidden');
                 document.getElementById('pptControls').classList.add('hidden');
-                
-                setTimeout(() => {
-                    if (iframe.contentDocument && iframe.contentDocument.body.innerHTML === '') {
-                        showLocalPPTViewer();
-                    }
-                }, 5000);
-                
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Error loading PPT:', error);
-                showFallback();
-            }
+                showPPTFallback();
+            });
         }
 
-        function showLocalPPTViewer() {
+        function viewPPTInNewTab() {
+            // Create a temporary link to open PPT in browser
+            // Browser will use default handler (PowerPoint Online, etc) without downloading
+            const token = getAuthToken();
+            if (!token) {
+                Toast.error('Token autentikasi tidak ditemukan');
+                return;
+            }
+
+            // Create a form to submit with POST (to include auth header via server)
+            // Or use a data URL approach
+            fetch(fileURL, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch');
+                return response.blob();
+            })
+            .then(blob => {
+                // Create object URL
+                const blobURL = URL.createObjectURL(blob);
+                
+                // Create temporary anchor to trigger browser's default action
+                const a = document.createElement('a');
+                a.href = blobURL;
+                a.target = '_blank';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up after a delay
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(blobURL);
+                }, 100);
+                
+                Toast.info('Membuka presentasi di tab baru...');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Toast.error('Gagal membuka presentasi');
+            });
+        }
+
+        function showPPTFallback() {
             const slideDisplay = document.getElementById('slideDisplay');
             slideDisplay.innerHTML = `
-                <div class="text-center p-8">
+                <div class="text-center p-8 bg-white rounded-lg">
                     <i class="fas fa-file-powerpoint text-6xl text-orange-500 mb-4"></i>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Presentasi PowerPoint</h3>
-                    <p class="text-gray-600 mb-4">Klik tombol di bawah untuk membuka presentasi</p>
-                    <div class="flex gap-4 justify-center">
-                        <a href="${fileURL}" download class="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2">
-                            <i class="fas fa-download"></i>
-                            Download PPT
-                        </a>
-                        <a href="https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(window.location.origin + fileURL)}" 
-                           target="_blank"
-                           class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2">
-                            <i class="fas fa-external-link-alt"></i>
-                            Buka di Office Online
-                        </a>
-                    </div>
+                    <p class="text-gray-600 mb-4">Tidak dapat memuat presentasi. Silakan coba lagi.</p>
+                    <button onclick="loadPPT()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors inline-flex items-center gap-2">
+                        <i class="fas fa-redo"></i>
+                        Coba Lagi
+                    </button>
                 </div>
             `;
+            hideLoading();
+            document.getElementById('pptViewer').classList.remove('hidden');
+        }
+
+        function updateSlideDisplay() {
+            const slideDisplay = document.getElementById('slideDisplay');
+            if (slideImages.length > 0 && currentSlide <= slideImages.length) {
+                slideDisplay.innerHTML = `
+                    <img src="${slideImages[currentSlide - 1]}" 
+                         alt="Slide ${currentSlide}" 
+                         class="slide-image w-full h-full object-contain" />
+                `;
+            }
+            if (document.getElementById('slideInfo')) {
+                document.getElementById('slideInfo').textContent = `Slide ${currentSlide} / ${totalSlides}`;
+            }
+            if (document.getElementById('prevBtn')) {
+                document.getElementById('prevBtn').disabled = currentSlide === 1;
+            }
+            if (document.getElementById('nextBtn')) {
+                document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+            }
         }
 
         function prevSlide() {
             if (currentSlide > 1) {
                 currentSlide--;
-                updateSlide();
+                if (slideImages.length > 0) {
+                    updateSlideDisplay();
+                } else {
+                    updateSlide();
+                }
             }
         }
 
         function nextSlide() {
             if (currentSlide < totalSlides) {
                 currentSlide++;
-                updateSlide();
+                if (slideImages.length > 0) {
+                    updateSlideDisplay();
+                } else {
+                    updateSlide();
+                }
             }
         }
 
         function updateSlide() {
-            document.getElementById('slideInfo').textContent = `Slide ${currentSlide} / ${totalSlides}`;
-            document.getElementById('prevBtn').disabled = currentSlide === 1;
-            document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+            if (document.getElementById('slideInfo')) {
+                document.getElementById('slideInfo').textContent = `Slide ${currentSlide} / ${totalSlides}`;
+            }
+            if (document.getElementById('prevBtn')) {
+                document.getElementById('prevBtn').disabled = currentSlide === 1;
+            }
+            if (document.getElementById('nextBtn')) {
+                document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+            }
         }
 
         function toggleFullscreen() {
@@ -361,11 +814,18 @@
 
         async function markComplete() {
             const btn = document.getElementById('completeBtn');
+            if (!btn) return;
+            
             btn.disabled = true;
+            const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
             
             try {
                 const token = getCookie('token');
+                if (!token) {
+                    throw new Error('Token tidak ditemukan. Silakan login ulang.');
+                }
+
                 const response = await fetch('/api/v1/student/modules/complete', {
                     method: 'POST',
                     headers: {
@@ -378,20 +838,29 @@
                     })
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
                     btn.classList.remove('bg-green-600', 'hover:bg-green-700');
                     btn.classList.add('bg-green-800');
                     btn.innerHTML = '<i class="fas fa-check-circle"></i> Sudah Selesai';
                     btn.disabled = true;
+                    btn.id = ''; // Remove id so it won't be triggered again
                     Toast.success('Modul berhasil ditandai selesai!');
+                    
+                    // Reload page after 1 second to update progress
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 } else {
-                    throw new Error('Failed to mark complete');
+                    const errorMsg = data.error || 'Gagal menandai modul sebagai selesai';
+                    throw new Error(errorMsg);
                 }
             } catch (error) {
                 console.error('Error:', error);
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check"></i> Tandai Selesai';
-                Toast.error('Gagal menandai modul sebagai selesai');
+                btn.innerHTML = originalHTML;
+                Toast.error(error.message || 'Gagal menandai modul sebagai selesai');
             }
         }
 

@@ -73,7 +73,9 @@ func (uc *courseUsecase) DeleteCourse(ctx context.Context, id uint) error {
 }
 
 func (uc *courseUsecase) GetAllCourses(ctx context.Context) ([]domain.Course, error) {
-	return uc.courseRepo.GetAll(ctx)
+	// Return only published courses (for student browse)
+	// Instructors should use GetInstructorCourses to see all their courses
+	return uc.courseRepo.GetPublished(ctx)
 }
 
 func (uc *courseUsecase) GetInstructorCourses(ctx context.Context, instructorID uint) ([]domain.Course, error) {
@@ -256,6 +258,42 @@ func (uc *courseUsecase) updateEnrollmentProgress(ctx context.Context, userID ui
 	}
 
 	return uc.enrollmentRepo.Update(ctx, enrollment)
+}
+
+// ========== PUBLISH/UNPUBLISH COURSE ==========
+
+func (uc *courseUsecase) PublishCourse(ctx context.Context, courseID uint, instructorID uint) error {
+	// Verify course exists and belongs to instructor
+	course, err := uc.courseRepo.GetByID(ctx, courseID)
+	if err != nil {
+		return errors.New("course not found")
+	}
+
+	// Verify ownership
+	if course.InstructorID != instructorID {
+		return errors.New("unauthorized: course does not belong to instructor")
+	}
+
+	// Publish course
+	course.IsPublished = true
+	return uc.courseRepo.Update(ctx, course)
+}
+
+func (uc *courseUsecase) UnpublishCourse(ctx context.Context, courseID uint, instructorID uint) error {
+	// Verify course exists and belongs to instructor
+	course, err := uc.courseRepo.GetByID(ctx, courseID)
+	if err != nil {
+		return errors.New("course not found")
+	}
+
+	// Verify ownership
+	if course.InstructorID != instructorID {
+		return errors.New("unauthorized: course does not belong to instructor")
+	}
+
+	// Unpublish course
+	course.IsPublished = false
+	return uc.courseRepo.Update(ctx, course)
 }
 
 func (uc *courseUsecase) GetModulesWithProgress(ctx context.Context, userID uint, courseID uint) ([]domain.ModuleWithProgress, error) {

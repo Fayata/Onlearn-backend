@@ -86,6 +86,8 @@ func InitRouter(handler *Handler) *gin.Engine {
 			instructor.GET("/courses/:id", handler.GetCourseDetail)
 			instructor.PUT("/courses/:id", handler.UpdateCourse)
 			instructor.DELETE("/courses/:id", handler.DeleteCourse)
+			instructor.POST("/courses/:id/publish", handler.PublishCourse)
+			instructor.POST("/courses/:id/unpublish", handler.UnpublishCourse)
 			
 			// Modules Management
 			instructor.POST("/modules", handler.AddModule)
@@ -130,6 +132,8 @@ func InitRouter(handler *Handler) *gin.Engine {
 			admin.GET("/courses/:id", handler.GetCourseDetail)
 			admin.PUT("/courses/:id", handler.UpdateCourse)
 			admin.DELETE("/courses/:id", handler.DeleteCourse)
+			admin.POST("/courses/:id/publish", handler.PublishCourse)
+			admin.POST("/courses/:id/unpublish", handler.UnpublishCourse)
 			admin.POST("/modules", handler.AddModule)
 			admin.PUT("/modules/:id", handler.UpdateModule)
 			admin.DELETE("/modules/:id", handler.DeleteModule)
@@ -151,19 +155,21 @@ func InitRouter(handler *Handler) *gin.Engine {
 
 // InitFileRouter initializes file-related routes for GridFS
 func InitFileRouter(r *gin.Engine, fileHandler *FileHandler) {
-	// Public file streaming (for viewing PDFs and PPTs)
-	r.GET("/files/:id", fileHandler.StreamFile)
-	r.GET("/files/:id/info", fileHandler.GetFileInfo)
-
-	// Protected file operations
+	// Protected file streaming with enrollment verification
 	api := r.Group("/api/v1")
 	{
-		// File upload requires authentication
 		files := api.Group("/files")
 		files.Use(AuthMiddleware("student", "instructor", "admin"))
 		{
+			// Protected file streaming (requires auth and enrollment check)
+			files.GET("/:id/stream", fileHandler.StreamFileProtected)
+			files.GET("/:id/info", fileHandler.GetFileInfo)
 			files.POST("/upload", fileHandler.UploadFile)
 			files.DELETE("/:id", fileHandler.DeleteFile)
 		}
 	}
+
+	// Legacy public endpoint (deprecated, kept for backward compatibility)
+	// Should be removed in production for security
+	r.GET("/files/:id", fileHandler.StreamFile)
 }

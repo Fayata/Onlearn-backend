@@ -97,6 +97,25 @@
                 </div>
             </div>
             <div class="flex items-center gap-3">
+                {{if eq .Course.IsPublished true}}
+                <button onclick="unpublishCourse({{.Course.ID}})" class="px-6 py-2.5 bg-yellow-600 text-white rounded-lg font-semibold hover:bg-yellow-700 transition-colors flex items-center gap-2">
+                    <i class="fas fa-eye-slash"></i>
+                    Unpublish
+                </button>
+                <span class="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm font-semibold flex items-center gap-2">
+                    <i class="fas fa-check-circle"></i>
+                    Published
+                </span>
+                {{else}}
+                <button onclick="publishCourse({{.Course.ID}})" class="px-6 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2">
+                    <i class="fas fa-paper-plane"></i>
+                    Publish Kursus
+                </button>
+                <span class="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm font-semibold flex items-center gap-2">
+                    <i class="fas fa-clock"></i>
+                    Draft
+                </span>
+                {{end}}
                 <button onclick="openAddModuleModal()" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2">
                     <i class="fas fa-plus"></i>
                     Tambah Modul
@@ -113,7 +132,7 @@
             <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
                 <div class="flex items-start gap-6">
                     {{if .Course.Thumbnail}}
-                    <img src="{{.Course.Thumbnail}}" alt="{{.Course.Title}}" class="w-48 h-32 object-cover rounded-lg">
+                    <img src="{{thumbnailURL .Course.Thumbnail}}" alt="{{.Course.Title}}" class="w-48 h-32 object-cover rounded-lg" onerror="this.style.display='none'">
                     {{else}}
                     <div class="w-48 h-32 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center">
                         <i class="fas fa-book text-white text-4xl"></i>
@@ -369,6 +388,66 @@
 
         function openEditCourseModal() {
             NotificationDialog.alert('Fitur untuk mengedit kursus belum diimplementasikan.', 'Segera Hadir');
+        }
+
+        async function publishCourse(courseId) {
+            NotificationDialog.confirm(
+                async () => {
+                    try {
+                        const token = getCookie('token');
+                        const response = await fetch(`/api/v1/instructor/courses/${courseId}/publish`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            NotificationDialog.alert('Kursus berhasil dipublish! Sekarang kursus dapat dilihat oleh student.', 'Sukses');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            const error = await response.json();
+                            NotificationDialog.alert('Gagal mempublish kursus: ' + (error.error || 'Terjadi kesalahan'), 'Gagal');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        NotificationDialog.alert('Terjadi kesalahan koneksi.', 'Error');
+                    }
+                },
+                'Apakah Anda yakin ingin mempublish kursus ini? Kursus akan langsung tampil di halaman browse student.',
+                'Publish Kursus'
+            );
+        }
+
+        async function unpublishCourse(courseId) {
+            NotificationDialog.confirm(
+                async () => {
+                    try {
+                        const token = getCookie('token');
+                        const response = await fetch(`/api/v1/instructor/courses/${courseId}/unpublish`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+
+                        if (response.ok) {
+                            NotificationDialog.alert('Kursus berhasil di-unpublish! Kursus tidak akan tampil di halaman browse student.', 'Sukses');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            const error = await response.json();
+                            NotificationDialog.alert('Gagal meng-unpublish kursus: ' + (error.error || 'Terjadi kesalahan'), 'Gagal');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        NotificationDialog.alert('Terjadi kesalahan koneksi.', 'Error');
+                    }
+                },
+                'Apakah Anda yakin ingin meng-unpublish kursus ini? Kursus tidak akan tampil di halaman browse student lagi.',
+                'Unpublish Kursus'
+            );
         }
 
         function getCookie(name) {

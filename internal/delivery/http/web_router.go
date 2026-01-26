@@ -193,6 +193,20 @@ func InitWebRouter(router *gin.Engine, webHandler *WebHandler) {
 			}
 			return v
 		},
+		"hasPrefix": func(s, prefix string) bool {
+			return strings.HasPrefix(s, prefix)
+		},
+		"thumbnailURL": func(thumb string) string {
+			if thumb == "" {
+				return ""
+			}
+			// Jika sudah absolute path (dimulai dengan /), langsung pakai
+			if strings.HasPrefix(thumb, "/") {
+				return thumb
+			}
+			// Jika relative, tambahkan /files/
+			return "/files/" + thumb
+		},
 	})
 
 	router.Static("/static", "./static")

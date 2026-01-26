@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// --- PostgreSQL Models (User, Lab, Course Metadata) ---
 
 type Role string
 

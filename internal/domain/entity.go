@@ -30,8 +30,12 @@ type Course struct {
 	Description  string    `json:"description" gorm:"type:text"`
 	Thumbnail    string    `json:"thumbnail"`
 	InstructorID uint      `json:"instructor_id" gorm:"not null"`
+	IsPublished  bool      `json:"is_published" gorm:"default:false"` // Kursus tidak langsung tampil ke student
 	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt    time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+
+	// Relations
+	Instructor User `json:"instructor,omitempty" gorm:"foreignKey:InstructorID"`
 }
 
 type Lab struct {

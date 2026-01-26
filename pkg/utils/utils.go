@@ -79,7 +79,6 @@ func ValidateJWT(tokenStr string) (*Claims, error) {
 	return claims, nil
 }
 
-// HandleUpload handles file uploads and saves them to the specified directory.
 func HandleUpload(c *gin.Context, formFile string) (string, error) {
 	file, err := c.FormFile(formFile)
 	if err != nil {

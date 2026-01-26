@@ -100,7 +100,13 @@ func (r *courseRepo) Update(ctx context.Context, course *domain.Course) error {
 
 func (r *courseRepo) GetAll(ctx context.Context) ([]domain.Course, error) {
 	var courses []domain.Course
-	err := r.db.WithContext(ctx).Find(&courses).Error
+	err := r.db.WithContext(ctx).Preload("Instructor").Find(&courses).Error
+	return courses, err
+}
+
+func (r *courseRepo) GetPublished(ctx context.Context) ([]domain.Course, error) {
+	var courses []domain.Course
+	err := r.db.WithContext(ctx).Where("is_published = ?", true).Preload("Instructor").Find(&courses).Error
 	return courses, err
 }
 
@@ -154,7 +160,7 @@ func (r *enrollmentRepo) GetByUserAndCourse(ctx context.Context, userID, courseI
 
 func (r *enrollmentRepo) GetByUserID(ctx context.Context, userID uint) ([]domain.Enrollment, error) {
 	var enrollments []domain.Enrollment
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Preload("Course").Find(&enrollments).Error
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Preload("Course").Preload("Course.Instructor").Find(&enrollments).Error
 	return enrollments, err
 }
 

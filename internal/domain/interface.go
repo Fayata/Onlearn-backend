@@ -20,6 +20,7 @@ type UserRepository interface {
 type CourseRepository interface {
 	Create(ctx context.Context, course *Course) error
 	GetAll(ctx context.Context) ([]Course, error)
+	GetPublished(ctx context.Context) ([]Course, error) // Get only published courses
 	GetByID(ctx context.Context, id uint) (*Course, error)
 	GetByInstructorID(ctx context.Context, instructorID uint) ([]Course, error)
 	Update(ctx context.Context, course *Course) error
@@ -140,6 +141,10 @@ type CourseUsecase interface {
 	SubmitAssignment(ctx context.Context, assignment *Assignment) error
 	GradeAssignment(ctx context.Context, assignmentID uint, grade float64, feedback string, gradedByID uint) error
 	GetCourseAssignments(ctx context.Context, courseID uint) ([]Assignment, error)
+
+	// Publish/Unpublish Course
+	PublishCourse(ctx context.Context, courseID uint, instructorID uint) error
+	UnpublishCourse(ctx context.Context, courseID uint, instructorID uint) error
 }
 
 type LabUsecase interface {

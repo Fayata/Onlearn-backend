@@ -109,8 +109,12 @@
                         {{ $badgeText = "text-green-700" }}
                     {{ end }}
 
-                <div class="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden flex flex-col h-full">
+                <div class="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden flex flex-col h-full" onclick="window.location.href='/student/courses/{{.CourseID}}'">
                     <div class="h-48 bg-gradient-to-br {{$bgGradient}} relative">
+                        {{if .Course.Thumbnail}}
+                        <img src="{{thumbnailURL .Course.Thumbnail}}" alt="{{.Course.Title}}" class="w-full h-full object-cover absolute inset-0" onerror="this.style.display='none'">
+                        <div class="absolute inset-0 bg-black/30"></div>
+                        {{end}}
                         <div class="absolute top-4 right-4">
                             <span class="px-3 py-1 {{$badgeBg}} {{$badgeText}} text-xs font-semibold rounded-full flex items-center gap-1 backdrop-blur-sm">
                                 {{if eq .Progress 100.0}}
@@ -130,7 +134,7 @@
                     <div class="p-6 flex flex-col flex-1">
                         <div class="flex items-center gap-2 text-sm text-gray-600 mb-4">
                             <i class="fas fa-user text-gray-400"></i>
-                            <span>{{.Course.Instructor.Name}}</span>
+                            <span>{{if .Course.Instructor.Name}}{{.Course.Instructor.Name}}{{else}}Instructor{{end}}</span>
                         </div>
                         
                         <div class="mb-4 flex-1">
@@ -145,14 +149,27 @@
                         </div>
 
                         {{if eq .Progress 100.0}}
-                        <button onclick="window.location.href='/student/certificates'" class="w-full {{$btnColor}} text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
-                            <i class="fas fa-certificate"></i>
-                            Ambil Sertifikat
-                        </button>
+                        <div class="flex gap-3" onclick="event.stopPropagation()">
+                            <button onclick="window.location.href='/student/courses/{{.CourseID}}'" class="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-eye"></i>
+                                Detail
+                            </button>
+                            <button onclick="window.location.href='/student/certificates'" class="flex-1 {{$btnColor}} text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-certificate"></i>
+                                Sertifikat
+                            </button>
+                        </div>
                         {{else}}
-                        <button onclick="window.location.href='/student/courses/{{.CourseID}}'" class="w-full {{$btnColor}} text-white py-2.5 rounded-lg font-semibold transition-colors">
-                            Lanjutkan Belajar
-                        </button>
+                        <div class="flex gap-3" onclick="event.stopPropagation()">
+                            <button onclick="window.location.href='/student/courses/{{.CourseID}}'" class="flex-1 px-4 py-2.5 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-eye"></i>
+                                Detail
+                            </button>
+                            <button onclick="window.location.href='/student/courses/{{.CourseID}}'" class="flex-1 {{$btnColor}} text-white py-2.5 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-play"></i>
+                                Lanjutkan
+                            </button>
+                        </div>
                         {{end}}
                     </div>
                 </div>
@@ -163,7 +180,7 @@
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Belum ada kursus diambil</h3>
                     <p class="text-gray-500 mb-6">Mulai perjalanan belajar Anda dengan mendaftar kursus baru.</p>
-                    <a href="/student/courses" class="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    <a href="/student/browse" class="px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
                         Browse Kursus
                     </a>
                 </div>

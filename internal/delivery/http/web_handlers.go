@@ -37,10 +37,8 @@ func NewWebHandler(
 // ========== AUTH PAGES ==========
 
 func (h *WebHandler) ShowLoginPage(c *gin.Context) {
-	// Cek jika user sudah login (cek cookie token)
 	token, err := c.Cookie("token")
 	if err == nil && token != "" {
-		// Parse token to get role and redirect accordingly
 		claims, parseErr := utils.ValidateJWT(token)
 		if parseErr == nil {
 			switch claims.Role {
@@ -188,8 +186,6 @@ func (h *WebHandler) StudentDashboard(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/?error=Gagal memuat dashboard")
 		return
 	}
-
-	// Bungkus data dengan struct anonim untuk menambahkan ActiveMenu
 	data := struct {
 		*domain.StudentDashboardData
 		ActiveMenu string
@@ -212,8 +208,6 @@ func (h *WebHandler) StudentCourses(c *gin.Context) {
 		return
 	}
 	userID := userIDVal.(uint)
-
-	// 1. Ambil User Data (untuk Sidebar)
 	dashboardData, err := h.DashboardUsecase.GetStudentDashboard(c.Request.Context(), userID)
 	if err != nil {
 		c.Redirect(http.StatusFound, "/?error=Gagal memuat data user")
@@ -221,14 +215,11 @@ func (h *WebHandler) StudentCourses(c *gin.Context) {
 	}
 	user := dashboardData.User
 
-	// 2. Ambil Daftar Kursus
 	enrollments, err := h.CourseUsecase.GetStudentEnrollments(c.Request.Context(), userID)
 	if err != nil {
-		// PERBAIKAN: Gunakan tipe slice yang sesuai dengan return value usecase
 		enrollments = []domain.EnrollmentWithCourse{}
 	}
 
-	// 3. Hitung Statistik Header
 	var completed, inProgress int
 	var totalProgress float64
 
@@ -246,8 +237,6 @@ func (h *WebHandler) StudentCourses(c *gin.Context) {
 	if total > 0 {
 		avgProgress = totalProgress / float64(total)
 	}
-
-	// 4. Kirim Data ke Template
 	data := gin.H{
 		"User":        user,
 		"Enrollments": enrollments,
@@ -389,8 +378,8 @@ func (h *WebHandler) StudentModuleViewer(c *gin.Context) {
 	// Determine file URL (support both GridFS and legacy file paths)
 	var fileURL string
 	if module.FileID != "" {
-		// File stored in GridFS
-		fileURL = "/files/" + module.FileID
+		// File stored in GridFS - use protected endpoint
+		fileURL = "/api/v1/files/" + module.FileID + "/stream"
 	} else if module.ContentURL != "" {
 		// Legacy file path
 		fileURL = module.ContentURL
@@ -520,9 +509,11 @@ func (h *WebHandler) InstructorCourseDetail(c *gin.Context) {
 	// Get enrolled students
 	students, _ := h.CourseUsecase.GetCourseStudents(c.Request.Context(), uint(courseID))
 
+	// CourseDetail embeds Course struct, so we can access Course fields directly
+	// In Go templates, embedded fields are accessible directly
 	data := gin.H{
 		"User":             user,
-		"Course":           courseDetail,
+		"Course":           courseDetail, // CourseDetail embeds Course, template can access .Course.IsPublished
 		"Modules":          courseDetail.Modules,
 		"Students":         students,
 		"EnrolledStudents": courseDetail.EnrolledStudents,
@@ -734,14 +725,30 @@ func (h *WebHandler) StudentBrowseCourses(c *gin.Context) {
 		return
 	}
 
-	courses, err := h.CourseUsecase.GetAllCourses(c.Request.Context())
+	// Get all published courses (GetAllCourses already filters published)
+	allCourses, err := h.CourseUsecase.GetAllCourses(c.Request.Context())
 	if err != nil {
-		courses = []domain.Course{}
+		allCourses = []domain.Course{}
+	}
+
+	// Get user's enrollments to filter out enrolled courses
+	enrollments, _ := h.CourseUsecase.GetStudentEnrollments(c.Request.Context(), userID)
+	enrolledCourseIDs := make(map[uint]bool)
+	for _, e := range enrollments {
+		enrolledCourseIDs[e.CourseID] = true
+	}
+
+	// Filter out courses that user already enrolled
+	var availableCourses []domain.Course
+	for _, course := range allCourses {
+		if !enrolledCourseIDs[course.ID] {
+			availableCourses = append(availableCourses, course)
+		}
 	}
 
 	data := gin.H{
 		"User":       dashboardData.User,
-		"Courses":    courses,
+		"Courses":    availableCourses,
 		"ActiveMenu": "browse",
 		"Title":      "Browse Kursus",
 		"PageTitle":  "Browse Kursus",

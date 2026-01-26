@@ -303,6 +303,50 @@ func (h *Handler) UpdateCourse(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Course updated successfully", "course": course})
 }
 
+func (h *Handler) PublishCourse(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	courseID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	if err := h.CourseUsecase.PublishCourse(c.Request.Context(), uint(courseID), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Course published successfully"})
+}
+
+func (h *Handler) UnpublishCourse(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	idStr := c.Param("id")
+	courseID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	if err := h.CourseUsecase.UnpublishCourse(c.Request.Context(), uint(courseID), userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Course unpublished successfully"})
+}
+
 func (h *Handler) DeleteCourse(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
@@ -342,6 +386,8 @@ func (h *Handler) DeleteCourse(c *gin.Context) {
 }
 
 func (h *Handler) GetAllCourses(c *gin.Context) {
+	// Students only see published courses
+	// Instructors should use GetInstructorCourses to see all their courses
 	courses, err := h.CourseUsecase.GetAllCourses(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

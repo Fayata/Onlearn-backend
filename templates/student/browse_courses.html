@@ -62,16 +62,39 @@
                     {{ $badgeLabel = "Beginner" }}
                     {{ $btnBorder = "border-rose-600 text-rose-600 hover:bg-rose-50" }}
                     {{ $btnSolid = "bg-rose-600 hover:bg-rose-700" }}
+                {{ else if eq $idx 3 }}
+                    {{ $bgGradient = "from-amber-500 to-orange-600" }}
+                    {{ $badgeText = "text-amber-700" }}
+                    {{ $badgeLabel = "Beginner" }}
+                    {{ $btnBorder = "border-amber-600 text-amber-600 hover:bg-amber-50" }}
+                    {{ $btnSolid = "bg-amber-600 hover:bg-amber-700" }}
+                {{ else if eq $idx 4 }}
+                    {{ $bgGradient = "from-cyan-500 to-blue-600" }}
+                    {{ $badgeText = "text-cyan-700" }}
+                    {{ $badgeLabel = "Intermediate" }}
+                    {{ $btnBorder = "border-cyan-600 text-cyan-600 hover:bg-cyan-50" }}
+                    {{ $btnSolid = "bg-cyan-600 hover:bg-cyan-700" }}
+                {{ else if eq $idx 5 }}
+                    {{ $bgGradient = "from-fuchsia-500 to-purple-600" }}
+                    {{ $badgeText = "text-fuchsia-700" }}
+                    {{ $badgeLabel = "Advanced" }}
+                    {{ $btnBorder = "border-fuchsia-600 text-fuchsia-600 hover:bg-fuchsia-50" }}
+                    {{ $btnSolid = "bg-fuchsia-600 hover:bg-fuchsia-700" }}
                 {{ end }}
 
                 <div class="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all overflow-hidden group cursor-pointer flex flex-col h-full">
                     <div class="h-48 bg-gradient-to-br {{$bgGradient}} relative overflow-hidden flex-shrink-0">
+                        {{if .Thumbnail}}
+                        <img src="{{thumbnailURL .Thumbnail}}" alt="{{.Title}}" class="w-full h-full object-cover absolute inset-0" onerror="this.style.display='none'">
+                        <div class="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-all"></div>
+                        {{else}}
                         <div class="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-all"></div>
+                        {{end}}
                         <div class="absolute top-4 left-4">
                             <span class="px-3 py-1 bg-white/90 backdrop-blur-sm {{$badgeText}} text-xs font-bold rounded-full">{{$badgeLabel}}</span>
                         </div>
                         <div class="absolute bottom-0 left-0 right-0 p-6">
-                            <h3 class="text-white font-bold text-2xl line-clamp-2">{{.Title}}</h3>
+                            <h3 class="text-white font-bold text-2xl line-clamp-2 drop-shadow-lg">{{.Title}}</h3>
                         </div>
                     </div>
                     <div class="p-6 flex flex-col flex-1">
@@ -81,8 +104,8 @@
                             <span>Instructor {{.InstructorID}}</span> 
                         </div>
                         <div class="flex items-center gap-4 text-sm text-gray-500 mb-6">
-                            <div class="flex items-center gap-1"><i class="fas fa-book-open text-gray-400"></i> <span>20 modul</span></div>
-                            <div class="flex items-center gap-1"><i class="fas fa-users text-gray-400"></i> <span>100+ students</span></div>
+                            <div class="flex items-center gap-1"><i class="fas fa-book-open text-gray-400"></i> <span>Modul tersedia</span></div>
+                            <div class="flex items-center gap-1"><i class="fas fa-users text-gray-400"></i> <span>Terbuka</span></div>
                         </div>
                         <div class="flex gap-3 mt-auto">
                             <button onclick="viewCourseDetail({{.ID}})" class="flex-1 px-4 py-2.5 border-2 {{$btnBorder}} rounded-lg font-semibold transition-colors">Detail</button>
@@ -91,10 +114,13 @@
                     </div>
                 </div>
                 {{else}}
-                <div class="col-span-3 text-center py-12">
-                    <div class="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-4"><i class="fas fa-search text-gray-400 text-3xl"></i></div>
-                    <h3 class="text-xl font-semibold text-gray-800">Belum ada kursus tersedia</h3>
-                    <p class="text-gray-500 mt-2">Silakan cek kembali nanti untuk kursus terbaru.</p>
+                <div class="col-span-3 text-center py-12 bg-white rounded-2xl shadow-sm">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4"><i class="fas fa-check-circle text-green-500 text-3xl"></i></div>
+                    <h3 class="text-xl font-semibold text-gray-800">Semua kursus sudah diikuti!</h3>
+                    <p class="text-gray-500 mt-2">Anda sudah mendaftar di semua kursus yang tersedia.</p>
+                    <a href="/student/courses" class="inline-block mt-4 px-6 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Lihat Jalur Pembelajaran
+                    </a>
                 </div>
                 {{end}}
             </div>

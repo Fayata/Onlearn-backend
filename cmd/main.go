@@ -115,6 +115,7 @@ func main() {
 	)
 
 	fileHandler := httpDelivery.NewFileHandler(gridFSRepo)
+	fileHandler.SetCourseUsecase(courseUsecase)
 
 	// ========== Initialize Router ==========
 	router := httpDelivery.InitRouter(apiHandler)
