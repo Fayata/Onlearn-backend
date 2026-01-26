@@ -106,6 +106,7 @@ func InitRouter(handler *Handler) *gin.Engine {
 			instructor.DELETE("/labs/:id", handler.DeleteLab)
 			instructor.POST("/labs/grade", handler.SubmitLabGrade)
 			instructor.GET("/labs/:id/ungraded", handler.GetUngradedStudents)
+			instructor.GET("/labs/:id/students", handler.GetLabStudents)
 
 			// Certificates
 			instructor.GET("/certificates/pending", handler.GetPendingCertificates)

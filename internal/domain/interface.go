@@ -164,6 +164,7 @@ type LabUsecase interface {
 	GetUngradedCountByLabID(ctx context.Context, labID uint) (int64, error)
 	GetLabsWithUngradedCount(ctx context.Context) ([]LabWithUngradedCount, error)
 	GetCompletedLabsByUserID(ctx context.Context, userID uint) ([]LabGrade, error)
+	GetLabStudents(ctx context.Context, labID uint) ([]LabGrade, error)
 }
 
 type CertificateUsecase interface {

@@ -21,6 +21,7 @@
     </script>
 </head>
 <body class="bg-gray-50">
+    {{template "notification_dialog.html" .}}
     {{template "toast.html" .}}
     <!-- Sidebar -->
     <div id="sidebar" class="fixed left-0 top-0 h-screen bg-slate-800 text-white transition-all duration-300 overflow-y-auto z-50" style="width: 250px;">
@@ -296,6 +297,62 @@
         </div>
     </div>
 
+    <!-- Edit Lab Modal -->
+    <div id="editLabModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-gray-800">Edit Lab</h3>
+                    <button onclick="closeEditLabModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <form id="editLabForm" onsubmit="updateLab(event)" class="p-6 space-y-4">
+                <input type="hidden" name="id">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Judul Lab *</label>
+                    <input type="text" name="title" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Masukkan judul lab">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi</label>
+                    <textarea name="description" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none" placeholder="Deskripsi lab..."></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Waktu Mulai *</label>
+                        <input type="datetime-local" name="start_time" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Waktu Selesai *</label>
+                        <input type="datetime-local" name="end_time" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                    <select name="status" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="scheduled">Scheduled</option>
+                        <option value="open">Open</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closeEditLabModal()" class="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         let sidebarCollapsed = false;
         function toggleSidebar() {
@@ -364,6 +421,90 @@
             document.getElementById('createLabForm').reset();
         }
 
+        function closeEditLabModal() {
+            document.getElementById('editLabModal').classList.add('hidden');
+            document.getElementById('editLabForm').reset();
+        }
+
+        // Helper function to format date from ISO to datetime-local
+        function fromRFC3339(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            // Adjust for timezone offset
+            const timezoneOffset = date.getTimezoneOffset() * 60000;
+            const localDate = new Date(date.getTime() - timezoneOffset);
+            return localDate.toISOString().slice(0, 16);
+        }
+
+        async function openEditLabModal(labId) {
+            try {
+                const token = getCookie('token');
+                const response = await fetch(`/api/v1/instructor/labs/${labId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const lab = await response.json();
+                    const form = document.getElementById('editLabForm');
+                    form.elements['id'].value = lab.id;
+                    form.elements['title'].value = lab.title;
+                    form.elements['description'].value = lab.description;
+                    form.elements['start_time'].value = fromRFC3339(lab.start_time);
+                    form.elements['end_time'].value = fromRFC3339(lab.end_time);
+                    form.elements['status'].value = lab.status;
+                    document.getElementById('editLabModal').classList.remove('hidden');
+                } else {
+                    Toast.error('Gagal memuat data lab');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Toast.error('Terjadi kesalahan koneksi');
+            }
+        }
+
+        async function updateLab(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const labId = formData.get('id');
+
+            const startTime = toRFC3339(formData.get('start_time'));
+            const endTime = toRFC3339(formData.get('end_time'));
+
+            const data = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                start_time: startTime,
+                end_time: endTime,
+                status: formData.get('status')
+            };
+
+            try {
+                const token = getCookie('token');
+                const response = await fetch(`/api/v1/instructor/labs/${labId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    Toast.success('Lab berhasil diperbarui!');
+                    closeEditLabModal();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    const error = await response.json();
+                    Toast.error('Gagal memperbarui lab: ' + (error.error || 'Terjadi kesalahan'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Toast.error('Terjadi kesalahan koneksi');
+            }
+        }
+
         // Helper function to convert datetime-local to RFC3339 format
         function toRFC3339(datetimeLocal) {
             if (!datetimeLocal) return '';
@@ -418,7 +559,7 @@
         async function gradeStudents(labId) {
             try {
                 const token = getCookie('token');
-                const response = await fetch(`/api/v1/instructor/labs/${labId}/ungraded`, {
+                const response = await fetch(`/api/v1/instructor/labs/${labId}/students`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -426,7 +567,7 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    displayUngradedStudents(labId, data.students || []);
+                    displayLabStudents(labId, data.students || []);
                     document.getElementById('gradeModalTitle').textContent = `Nilai Students - Lab ID ${labId}`;
                     document.getElementById('gradeModal').classList.remove('hidden');
                 } else {
@@ -438,43 +579,77 @@
             }
         }
 
-        function displayUngradedStudents(labId, students) {
+        function displayLabStudents(labId, students) {
             const container = document.getElementById('ungradedStudentsList');
             if (students.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500 py-8">Semua students sudah dinilai</p>';
+                container.innerHTML = '<p class="text-center text-gray-500 py-8">Belum ada student yang mendaftar di lab ini.</p>';
                 return;
             }
 
-            container.innerHTML = students.map(student => `
-                <div class="border-2 border-orange-200 rounded-xl p-4 bg-orange-50">
+            container.innerHTML = `
+                <div class="mb-4">
+                    <input type="text" id="studentSearch" onkeyup="searchStudents()" placeholder="Cari nama student..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div id="student-list-items">
+                    ${students.map(studentGrade => studentCard(labId, studentGrade)).join('')}
+                </div>
+            `;
+        }
+
+        function studentCard(labId, studentGrade) {
+            const student = studentGrade.User;
+            const isGraded = studentGrade.Grade && studentGrade.Grade !== "";
+            const cardBorderColor = isGraded ? 'border-green-200' : 'border-orange-200';
+            const cardBgColor = isGraded ? 'bg-green-50' : 'bg-orange-50';
+            const statusBadgeColor = isGraded ? 'bg-green-600' : 'bg-orange-600';
+            const statusText = isGraded ? `Dinilai: ${studentGrade.Grade}` : 'Belum Dinilai';
+
+            return `
+                <div class="student-card border-2 ${cardBorderColor} rounded-xl p-4 ${cardBgColor}">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center text-white">
-                                <span class="font-bold">${student.name ? student.name.substring(0, 2).toUpperCase() : 'ST'}</span>
+                            <div class="w-12 h-12 ${statusBadgeColor} rounded-full flex items-center justify-center text-white">
+                                <span class="font-bold">${student.Name ? student.Name.substring(0, 2).toUpperCase() : 'ST'}</span>
                             </div>
                             <div>
-                                <p class="font-bold text-gray-800">${student.name || 'Unknown'}</p>
-                                <p class="text-sm text-gray-600">${student.email || ''}</p>
+                                <p class="student-name font-bold text-gray-800">${student.Name || 'Unknown'}</p>
+                                <p class="text-sm text-gray-600">${student.Email || ''}</p>
                             </div>
                         </div>
-                        <span class="px-3 py-1 bg-orange-600 text-white text-xs font-bold rounded-full">Belum Dinilai</span>
+                        <span class="px-3 py-1 ${statusBadgeColor} text-white text-xs font-bold rounded-full">${statusText}</span>
                     </div>
                     <div class="flex gap-3">
-                        <select id="grade_${student.user_id}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                        <select id="grade_${student.ID}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
                             <option value="">Pilih Nilai</option>
-                            <option value="A">A (90-100)</option>
-                            <option value="B">B (80-89)</option>
-                            <option value="C">C (70-79)</option>
-                            <option value="D">D (60-69)</option>
-                            <option value="E">E (0-59)</option>
+                            <option value="A" ${studentGrade.Grade === 'A' ? 'selected' : ''}>A (90-100)</option>
+                            <option value="B" ${studentGrade.Grade === 'B' ? 'selected' : ''}>B (80-89)</option>
+                            <option value="C" ${studentGrade.Grade === 'C' ? 'selected' : ''}>C (70-79)</option>
+                            <option value="D" ${studentGrade.Grade === 'D' ? 'selected' : ''}>D (60-69)</option>
+                            <option value="E" ${studentGrade.Grade === 'E' ? 'selected' : ''}>E (0-59)</option>
                         </select>
-                        <input type="text" id="feedback_${student.user_id}" placeholder="Feedback (opsional)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
-                        <button onclick="saveLabGrade(${labId}, ${student.user_id})" class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
+                        <input type="text" id="feedback_${student.ID}" placeholder="Feedback (opsional)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg" value="${studentGrade.Feedback || ''}">
+                        <button onclick="saveLabGrade(${labId}, ${student.ID})" class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
                             Simpan
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;
+        }
+        
+        function searchStudents() {
+            const input = document.getElementById('studentSearch');
+            const filter = input.value.toUpperCase();
+            const list = document.getElementById('student-list-items');
+            const cards = list.getElementsByClassName('student-card');
+
+            for (let i = 0; i < cards.length; i++) {
+                const name = cards[i].querySelector('.student-name');
+                if (name.innerText.toUpperCase().indexOf(filter) > -1) {
+                    cards[i].style.display = "";
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
         }
 
         async function saveLabGrade(labId, studentId) {

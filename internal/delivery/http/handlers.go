@@ -977,6 +977,26 @@ func (h *Handler) GetUngradedStudents(c *gin.Context) {
 	})
 }
 
+func (h *Handler) GetLabStudents(c *gin.Context) {
+	idStr := c.Param("id")
+	labID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lab ID"})
+		return
+	}
+
+	grades, err := h.LabUsecase.GetLabStudents(c.Request.Context(), uint(labID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"students": grades,
+		"count":    len(grades),
+	})
+}
+
 // ========== CERTIFICATE HANDLERS ==========
 
 func (h *Handler) GetUserCertificates(c *gin.Context) {
@@ -1061,6 +1081,19 @@ func (h *Handler) CreateUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "User created successfully", "user": user})
+}
+
+func (h *Handler) GetAllStudents(c *gin.Context) {
+	students, err := h.UserUsecase.GetUsersByRole(c.Request.Context(), domain.RoleStudent)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"students": students,
+		"count":    len(students),
+	})
 }
 
 // ========== REPORTS ==========

@@ -140,7 +140,11 @@ func (uc *labUsecase) SubmitGrade(ctx context.Context, instructorID, userID, lab
 	}
 
 	if labGrade == nil {
-		return errors.New("student not enrolled in this lab")
+		// Create a new grade if student not enrolled
+		labGrade = &domain.LabGrade{
+			UserID: userID,
+			LabID:  labID,
+		}
 	}
 
 	// Update grade
@@ -149,7 +153,11 @@ func (uc *labUsecase) SubmitGrade(ctx context.Context, instructorID, userID, lab
 
 	err = uc.labRepo.UpdateGrade(ctx, labGrade)
 	if err != nil {
-		return err
+		// If update fails, try to create (in case of race condition or new grade)
+		err = uc.labRepo.CreateGrade(ctx, labGrade)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Auto-generate certificate if grade is good (e.g., A or B)
@@ -225,4 +233,8 @@ func (uc *labUsecase) GetCompletedLabsByUserID(ctx context.Context, userID uint)
 	}
 
 	return completed, nil
+}
+
+func (uc *labUsecase) GetLabStudents(ctx context.Context, labID uint) ([]domain.LabGrade, error) {
+	return uc.labRepo.GetGradesByLabID(ctx, labID)
 }
