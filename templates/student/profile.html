@@ -57,8 +57,8 @@
                                     <span class="text-gray-800 font-semibold">{{.User.Email}}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-gray-600 font-medium">Last login:</span>
-                                    <span class="text-gray-800 font-semibold">{{if .User.UpdatedAt}}{{.User.UpdatedAt | timeSince}}{{else}}Never{{end}}</span>
+                                    <span class="text-gray-600 font-medium">Member since:</span>
+                                    <span class="text-gray-800 font-semibold">{{.User.CreatedAt | date}}</span>
                                 </div>
                             </div>
                         </div>
@@ -130,7 +130,7 @@
                                     </div>
                                     <div class="flex gap-1">
                                         {{$total := 5}}
-                                        {{$completed := div (mul .Progress 5) 100}}
+                                        {{$completed := toInt (div (mul .Progress 5) 100)}}
                                         {{range $i := seq 1 $total}}
                                             {{if le $i $completed}}
                                                 <div class="w-8 h-8 bg-red-500 rounded"></div>

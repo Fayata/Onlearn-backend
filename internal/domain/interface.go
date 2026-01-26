@@ -10,6 +10,7 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id uint) (*User, error)
 	Update(ctx context.Context, user *User) error
 	UpdateVerified(ctx context.Context, email string) error
+	UpdateLastLogin(ctx context.Context, userID uint) error
 	GetByIDs(ctx context.Context, ids []uint) ([]User, error)
 	GetByRole(ctx context.Context, role Role) ([]User, error)
 	GetAll(ctx context.Context) ([]User, error)

@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-
 type Role string
 
 const (
@@ -16,16 +15,17 @@ const (
 )
 
 type User struct {
-	ID               uint      `gorm:"primaryKey" json:"id"`
-	Name             string    `json:"name"`
-	Email            string    `gorm:"uniqueIndex" json:"email"`
-	Password         string    `json:"-"` // Hide password in JSON
-	Role             Role      `json:"role"`
-	IsVerified       bool      `json:"is_verified" gorm:"default:false"`
-	VerificationCode string    `json:"-"`
-	Avatar           string    `json:"avatar"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	ID               uint       `gorm:"primaryKey" json:"id"`
+	Name             string     `json:"name"`
+	Email            string     `gorm:"uniqueIndex" json:"email"`
+	Password         string     `json:"-"` // Hide password in JSON
+	Role             Role       `json:"role"`
+	IsVerified       bool       `json:"is_verified" gorm:"default:false"`
+	VerificationCode string     `json:"-"`
+	Avatar           string     `json:"avatar"`
+	LastLoginAt      *time.Time `json:"last_login_at" gorm:"default:null"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 type Course struct {
@@ -65,7 +65,7 @@ type LabSubmission struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
 	LabID     uint      `json:"lab_id"`
 	StudentID uint      `json:"student_id"`
-	Grade     *float64  `json:"grade"` 
+	Grade     *float64  `json:"grade"`
 	Feedback  string    `json:"feedback"`
 	Attended  bool      `json:"attended" gorm:"default:false"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -79,7 +79,7 @@ type Certificate struct {
 	LabID    *uint     `json:"lab_id"`
 	Code     string    `json:"code" gorm:"unique"`
 	IssuedAt time.Time `json:"issued_at"`
-	Status   string    `json:"status" gorm:"default:'pending'"` 
+	Status   string    `json:"status" gorm:"default:'pending'"`
 }
 
 // --- MongoDB Models (Course Modules & Content) ---

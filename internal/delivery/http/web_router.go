@@ -134,6 +134,8 @@ func InitWebRouter(router *gin.Engine, webHandler *WebHandler) {
 		},
 		"mod": func(i, j int) int { return i % j },
 
+		"toInt": toInt,
+
 		"date": func(t interface{}) string {
 			if t == nil {
 				return ""
@@ -274,3 +276,17 @@ func toFloat(v interface{}) float64 {
 		return 0
 	}
 }
+
+func toInt(v interface{}) int {
+	switch i := v.(type) {
+	case int:
+		return i
+	case int64:
+		return int(i)
+	case float64:
+		return int(i)
+	default:
+		return 0
+	}
+}
+

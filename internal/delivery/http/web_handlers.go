@@ -509,8 +509,6 @@ func (h *WebHandler) InstructorCourseDetail(c *gin.Context) {
 	// Get enrolled students
 	students, _ := h.CourseUsecase.GetCourseStudents(c.Request.Context(), uint(courseID))
 
-	// CourseDetail embeds Course struct, so we can access Course fields directly
-	// In Go templates, embedded fields are accessible directly
 	data := gin.H{
 		"User":             user,
 		"Course":           courseDetail, // CourseDetail embeds Course, template can access .Course.IsPublished
@@ -605,7 +603,6 @@ func (h *WebHandler) InstructorCertificates(c *gin.Context) {
 		if cert.CourseID != nil && courseIDs[*cert.CourseID] {
 			filteredPending = append(filteredPending, cert)
 		} else if cert.LabID != nil {
-			// Lab certificates - include all for now
 			filteredPending = append(filteredPending, cert)
 		}
 	}
@@ -795,14 +792,12 @@ func (h *WebHandler) StudentCertificates(c *gin.Context) {
 	}
 	userID := userIDVal.(uint)
 
-	// 1. Ambil Data User (untuk Sidebar)
 	dashboardData, err := h.DashboardUsecase.GetStudentDashboard(c.Request.Context(), userID)
 	if err != nil {
 		c.Redirect(http.StatusFound, "/?error=Gagal memuat data user")
 		return
 	}
 
-	// 2. Ambil Daftar Sertifikat User
 	certs, err := h.CertUsecase.GetUserCertificates(c.Request.Context(), userID)
 	if err != nil {
 		certs = []domain.Certificate{}
@@ -827,20 +822,17 @@ func (h *WebHandler) StudentProfile(c *gin.Context) {
 	}
 	userID := userIDVal.(uint)
 
-	// 1. Ambil Data User
 	dashboardData, err := h.DashboardUsecase.GetStudentDashboard(c.Request.Context(), userID)
 	if err != nil {
 		c.Redirect(http.StatusFound, "/?error=Gagal memuat data user")
 		return
 	}
 
-	// 2. Ambil Enrollments (Learning Paths)
 	enrollments, err := h.CourseUsecase.GetStudentEnrollments(c.Request.Context(), userID)
 	if err != nil {
 		enrollments = []domain.EnrollmentWithCourse{}
 	}
 
-	// 3. Ambil Completed Labs (labs dengan grade yang sudah diisi)
 	completedLabGrades, _ := h.LabUsecase.GetCompletedLabsByUserID(c.Request.Context(), userID)
 
 	data := gin.H{
@@ -863,7 +855,6 @@ func (h *WebHandler) StudentProfileEdit(c *gin.Context) {
 	}
 	userID := userIDVal.(uint)
 
-	// Get user data
 	dashboardData, err := h.DashboardUsecase.GetStudentDashboard(c.Request.Context(), userID)
 	if err != nil {
 		c.Redirect(http.StatusFound, "/?error=Gagal memuat data user")
@@ -878,7 +869,6 @@ func (h *WebHandler) StudentProfileEdit(c *gin.Context) {
 	}
 
 	if c.Request.Method == "POST" {
-		// Handle form submission
 		name := c.PostForm("name")
 		password := c.PostForm("password")
 
@@ -888,7 +878,6 @@ func (h *WebHandler) StudentProfileEdit(c *gin.Context) {
 			Password: password,
 		}
 
-		// Handle profile picture upload
 		filePath, err := utils.HandleUpload(c, "profile_picture")
 		if err == nil && filePath != "" {
 			user.ProfilePicture = filePath

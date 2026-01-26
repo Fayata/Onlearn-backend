@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"log"
 	"onlearn-backend/internal/domain"
 	"onlearn-backend/pkg/utils"
 	"time"
@@ -34,7 +35,6 @@ func (uc *authUsecase) Register(ctx context.Context, user *domain.User) error {
 		return err
 	}
 
-	// In a real app, you would generate a verification token and send it.
 	go utils.SendEmail(user.Email, "Verify Your OnLearn Account", "Here is your verification code: FAKE-CODE")
 	return nil
 }
@@ -47,6 +47,11 @@ func (uc *authUsecase) Login(ctx context.Context, email, password string) (strin
 
 	if !utils.CheckPasswordHash(password, user.Password) {
 		return "", errors.New("invalid credentials")
+	}
+
+	// Update last login timestamp
+	if err := uc.userRepo.UpdateLastLogin(ctx, user.ID); err != nil {
+		log.Printf("Warning: Failed to update last login: %v", err)
 	}
 
 	return utils.GenerateJWT(user.ID, string(user.Role))
@@ -76,17 +81,14 @@ func (uc *authUsecase) UpdateUser(ctx context.Context, user *domain.User) error 
 }
 
 func (uc *authUsecase) VerifyEmail(ctx context.Context, email, code string) error {
-	// In a real app, you would check the code against a stored value.
 	return uc.userRepo.UpdateVerified(ctx, email)
 }
 
 func (uc *authUsecase) ForgotPassword(ctx context.Context, email string) error {
 	user, err := uc.userRepo.GetByEmail(ctx, email)
 	if err != nil || user.ID == 0 {
-		// Do not return an error to prevent email enumeration.
 		return nil
 	}
-	// In a real app, generate a proper reset token.
 	go utils.SendEmail(email, "Password Reset Request", "Here is your password reset link: FAKE-LINK")
 	return nil
 }

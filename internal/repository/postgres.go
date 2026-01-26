@@ -18,7 +18,13 @@ type userRepo struct {
 func NewUserRepository(db *gorm.DB) domain.UserRepository {
 	return &userRepo{db}
 }
-
+func (r *userRepo) UpdateLastLogin(ctx context.Context, userID uint) error {
+	now := time.Now()
+	return r.db.WithContext(ctx).
+		Model(&domain.User{}).
+		Where("id = ?", userID).
+		Update("last_login_at", now).Error
+}
 func (r *userRepo) Create(ctx context.Context, user *domain.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }

@@ -67,7 +67,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&domain.Enrollment{},
 		&domain.LabGrade{},
 		&domain.Certificate{},
-		// TAMBAHAN: Daftarkan tabel yang hilang
 		&domain.ModuleProgress{},
 		&domain.Assignment{},
 	)
