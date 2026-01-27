@@ -571,3 +571,9 @@ func (r *certRepo) CountByStatus(ctx context.Context, status string) (int64, err
 	err := r.db.WithContext(ctx).Model(&domain.Certificate{}).Where("status = ?", status).Count(&count).Error
 	return count, err
 }
+
+// func (r *certRepo) CountByUserID(ctx context.Context, userID uint) (int64, error) {
+// 	var count int64
+// 	err := r.db.WithContext(ctx).Model(&domain.Certificate{}).Where("user_id = ?", userID).Count(&count).Error
+// 	return count, err
+// }	
