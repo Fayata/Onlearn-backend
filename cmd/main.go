@@ -59,6 +59,7 @@ func main() {
 		moduleProgressRepo,
 		assignmentRepo,
 		certRepo,
+		userRepo,
 	)
 
 	labUsecase := usecase.NewLabUsecase(

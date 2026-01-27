@@ -238,3 +238,7 @@ func (uc *labUsecase) GetCompletedLabsByUserID(ctx context.Context, userID uint)
 func (uc *labUsecase) GetLabStudents(ctx context.Context, labID uint) ([]domain.LabGrade, error) {
 	return uc.labRepo.GetGradesByLabID(ctx, labID)
 }
+
+func (uc *labUsecase) SearchAllStudents(ctx context.Context, searchTerm string) ([]domain.User, error) {
+	return uc.userRepo.SearchStudents(ctx, searchTerm)
+}

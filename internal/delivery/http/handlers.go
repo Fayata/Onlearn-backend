@@ -718,11 +718,14 @@ func (h *Handler) SubmitAssignment(c *gin.Context) {
 		return
 	}
 
+	// Handle file upload (optional for quiz completion - HandleUpload returns empty string if no file)
 	filePath, err := utils.HandleUpload(c, "file")
 	if err != nil {
+		// HandleUpload returns nil error if file is missing, so any error here is real
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file: " + err.Error()})
 		return
 	}
+	// filePath can be empty for quiz completion without file submission
 
 	assignment := &domain.Assignment{
 		UserID:   userID,
@@ -994,6 +997,60 @@ func (h *Handler) GetLabStudents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"students": grades,
 		"count":    len(grades),
+	})
+}
+
+func (h *Handler) GetCourseStudents(c *gin.Context) {
+	idStr := c.Param("id")
+	courseID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course ID"})
+		return
+	}
+
+	students, err := h.CourseUsecase.GetCourseStudents(c.Request.Context(), uint(courseID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"students": students,
+		"count":    len(students),
+	})
+}
+
+func (h *Handler) GetModuleStudents(c *gin.Context) {
+	idStr := c.Param("id")
+	moduleID := idStr
+	
+	students, err := h.CourseUsecase.GetModuleStudents(c.Request.Context(), moduleID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"students": students,
+		"count":    len(students),
+	})
+}
+
+func (h *Handler) SearchAllStudents(c *gin.Context) {
+	searchTerm := c.Query("q")
+	if searchTerm == "" {
+		searchTerm = ""
+	}
+
+	students, err := h.LabUsecase.SearchAllStudents(c.Request.Context(), searchTerm)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"students": students,
+		"count":    len(students),
 	})
 }
 

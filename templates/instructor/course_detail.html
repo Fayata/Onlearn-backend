@@ -185,6 +185,10 @@
                                         <i class="fas fa-link"></i>
                                         Link Quiz/Exam
                                     </a>
+                                    <button onclick="openGradeModuleModal('{{.ID}}', '{{.Title}}')" class="text-orange-600 hover:text-orange-700 font-medium flex items-center gap-1">
+                                        <i class="fas fa-clipboard-check"></i>
+                                        Nilai Student
+                                    </button>
                                     {{end}}
                                 </div>
                             </div>
@@ -267,6 +271,30 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Grade Module Students Modal -->
+    <div id="gradeModuleModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800" id="gradeModuleModalTitle">Nilai Student - Modul</h3>
+                    <p class="text-sm text-gray-500 mt-1">Student yang sudah menyelesaikan quiz modul ini</p>
+                </div>
+                <button onclick="closeGradeModuleModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <div class="mb-4">
+                    <input type="text" id="moduleStudentSearch" onkeyup="searchModuleStudents()" placeholder="Cari nama student..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div id="moduleStudentsList" class="space-y-4">
+                    <p class="text-center text-gray-500 py-8">Memuat data student...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -448,6 +476,213 @@
                 'Apakah Anda yakin ingin meng-unpublish kursus ini? Kursus tidak akan tampil di halaman browse student lagi.',
                 'Unpublish Kursus'
             );
+        }
+
+        async function openGradeModuleModal(moduleId, moduleTitle) {
+            // Get course ID from URL
+            const courseId = window.location.pathname.match(/\/courses\/(\d+)/)?.[1];
+            if (!courseId) {
+                NotificationDialog.alert('Gagal mendapatkan course ID', 'Error');
+                return;
+            }
+            
+            // Store course ID and module ID for later use
+            document.getElementById('gradeModuleModal').setAttribute('data-course-id', courseId);
+            document.getElementById('gradeModuleModal').setAttribute('data-module-id', moduleId);
+            
+            document.getElementById('gradeModuleModalTitle').textContent = `Nilai Student - ${moduleTitle}`;
+            document.getElementById('gradeModuleModal').classList.remove('hidden');
+            document.getElementById('moduleStudentsList').innerHTML = '<p class="text-center text-gray-500 py-8">Memuat data student...</p>';
+            
+            try {
+                const token = getCookie('token');
+                const response = await fetch(`/api/v1/instructor/modules/${moduleId}/students`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const text = await response.text();
+                    if (text) {
+                        const data = JSON.parse(text);
+                        displayModuleStudents(moduleId, courseId, data.students || []);
+                    } else {
+                        displayModuleStudents(moduleId, courseId, []);
+                    }
+                } else {
+                    const error = await response.json();
+                    document.getElementById('moduleStudentsList').innerHTML = `<p class="text-center text-red-500 py-8">Gagal memuat data: ${error.error || 'Terjadi kesalahan'}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('moduleStudentsList').innerHTML = '<p class="text-center text-red-500 py-8">Terjadi kesalahan koneksi</p>';
+            }
+        }
+
+        function closeGradeModuleModal() {
+            document.getElementById('gradeModuleModal').classList.add('hidden');
+            document.getElementById('moduleStudentSearch').value = '';
+        }
+
+        function displayModuleStudents(moduleId, courseId, students) {
+            const container = document.getElementById('moduleStudentsList');
+            if (students.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 py-8">Belum ada student yang menyelesaikan quiz modul ini.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div id="module-student-list-items">
+                    ${students.map(studentData => moduleStudentCard(moduleId, courseId, studentData)).join('')}
+                </div>
+            `;
+        }
+
+        function moduleStudentCard(moduleId, courseId, studentData) {
+            if (!studentData.User) {
+                return '';
+            }
+            const student = studentData.User;
+            const assignment = studentData.Assignment;
+            const isGraded = assignment && assignment.grade !== null && assignment.grade !== undefined;
+            const cardBorderColor = isGraded ? 'border-green-200' : 'border-orange-200';
+            const cardBgColor = isGraded ? 'bg-green-50' : 'bg-orange-50';
+            const statusBadgeColor = isGraded ? 'bg-green-600' : 'bg-orange-600';
+            const statusText = isGraded ? `Sudah Dinilai: ${assignment.grade}` : 'Belum Dinilai';
+            const completedDate = assignment && assignment.submitted_at ? new Date(assignment.submitted_at).toLocaleDateString('id-ID') : '-';
+
+            return `
+                <div class="module-student-card border-2 ${cardBorderColor} rounded-xl p-4 ${cardBgColor}">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 ${statusBadgeColor} rounded-full flex items-center justify-center text-white">
+                                <span class="font-bold">${student.name ? student.name.substring(0, 2).toUpperCase() : 'ST'}</span>
+                            </div>
+                            <div>
+                                <p class="module-student-name font-bold text-gray-800">${student.name || 'Unknown'}</p>
+                                <p class="text-sm text-gray-600">${student.email || ''}</p>
+                                <p class="text-xs text-gray-500 mt-1">Selesai: ${completedDate}</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 ${statusBadgeColor} text-white text-xs font-bold rounded-full">${statusText}</span>
+                    </div>
+                    ${assignment && assignment.file_url ? `
+                        <div class="mb-3">
+                            <a href="${assignment.file_url}" target="_blank" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
+                                <i class="fas fa-file-download"></i>
+                                Lihat File Tugas
+                            </a>
+                        </div>
+                    ` : ''}
+                    <div class="flex gap-3">
+                        <input type="number" id="module_grade_${student.id}" min="0" max="100" step="0.1" 
+                            placeholder="Nilai (0-100)" 
+                            value="${assignment && assignment.grade ? assignment.grade : ''}"
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                        <input type="text" id="module_feedback_${student.id}" 
+                            placeholder="Feedback (opsional)" 
+                            value="${assignment && assignment.feedback ? assignment.feedback : ''}"
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                        <button onclick="saveModuleGrade('${moduleId}', ${courseId}, ${student.id}, ${assignment ? `'${assignment.id}'` : 'null'})" 
+                            class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
+                            ${isGraded ? 'Update' : 'Simpan'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function searchModuleStudents() {
+            const input = document.getElementById('moduleStudentSearch');
+            const filter = input.value.toUpperCase();
+            const list = document.getElementById('module-student-list-items');
+            if (!list) return;
+            
+            const cards = list.getElementsByClassName('module-student-card');
+            for (let i = 0; i < cards.length; i++) {
+                const name = cards[i].querySelector('.module-student-name');
+                if (name && name.innerText.toUpperCase().indexOf(filter) > -1) {
+                    cards[i].style.display = "";
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
+        }
+
+        async function saveModuleGrade(moduleId, courseId, studentId, assignmentId) {
+            const gradeInput = document.getElementById(`module_grade_${studentId}`);
+            const feedbackInput = document.getElementById(`module_feedback_${studentId}`);
+            const grade = parseFloat(gradeInput.value);
+            const feedback = feedbackInput.value;
+
+            if (!gradeInput.value || isNaN(grade) || grade < 0 || grade > 100) {
+                NotificationDialog.alert('Masukkan nilai yang valid (0-100)', 'Error');
+                return;
+            }
+
+            try {
+                const token = getCookie('token');
+                
+                if (!assignmentId || assignmentId === 'null') {
+                    const formData = new FormData();
+                    formData.append('module_id', moduleId);
+                    formData.append('course_id', courseId);
+                    formData.append('student_id', studentId);
+                    
+                    const createResponse = await fetch('/api/v1/student/assignments/submit', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    });
+                    
+                    if (!createResponse.ok) {
+                        NotificationDialog.alert('Gagal membuat record assignment. Pastikan student sudah menyelesaikan quiz.', 'Error');
+                        return;
+                    }
+                    
+                    const refreshResponse = await fetch(`/api/v1/instructor/modules/${moduleId}/students`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (refreshResponse.ok) {
+                        const refreshData = await refreshResponse.json();
+                        const studentData = refreshData.students.find(s => s.User.id === studentId);
+                        if (studentData && studentData.Assignment) {
+                            assignmentId = studentData.Assignment.id;
+                        }
+                    }
+                }
+
+                if (!assignmentId || assignmentId === 'null') {
+                    NotificationDialog.alert('Gagal mendapatkan assignment ID. Silakan refresh dan coba lagi.', 'Error');
+                    return;
+                }
+
+                const response = await fetch('/api/v1/instructor/assignments/grade', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        assignment_id: parseInt(assignmentId),
+                        grade: grade,
+                        feedback: feedback
+                    })
+                });
+
+                if (response.ok) {
+                    NotificationDialog.alert('Nilai berhasil disimpan!', 'Sukses');
+                    setTimeout(() => {
+                        const moduleTitle = document.getElementById('gradeModuleModalTitle').textContent.replace('Nilai Student - ', '');
+                        openGradeModuleModal(moduleId, moduleTitle);
+                    }, 1000);
+                } else {
+                    const error = await response.json();
+                    NotificationDialog.alert('Gagal menyimpan nilai: ' + (error.error || 'Terjadi kesalahan'), 'Gagal');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                NotificationDialog.alert('Terjadi kesalahan koneksi.', 'Error');
+            }
         }
 
         function getCookie(name) {

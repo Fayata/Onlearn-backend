@@ -14,6 +14,7 @@ type courseUsecase struct {
 	progressRepo   domain.ModuleProgressRepository
 	assignmentRepo domain.AssignmentRepository
 	certRepo       domain.CertificateRepository
+	userRepo       domain.UserRepository
 }
 
 func NewCourseUsecase(
@@ -23,6 +24,7 @@ func NewCourseUsecase(
 	pr domain.ModuleProgressRepository,
 	ar domain.AssignmentRepository,
 	certr domain.CertificateRepository,
+	ur domain.UserRepository,
 ) domain.CourseUsecase {
 	return &courseUsecase{
 		courseRepo:     cr,
@@ -31,6 +33,7 @@ func NewCourseUsecase(
 		progressRepo:   pr,
 		assignmentRepo: ar,
 		certRepo:       certr,
+		userRepo:       ur,
 	}
 }
 
@@ -360,4 +363,11 @@ func (uc *courseUsecase) GradeAssignment(ctx context.Context, assignmentID uint,
 
 func (uc *courseUsecase) GetCourseAssignments(ctx context.Context, courseID uint) ([]domain.Assignment, error) {
 	return uc.assignmentRepo.GetByCourseID(ctx, courseID)
+}
+
+func (uc *courseUsecase) GetModuleStudents(ctx context.Context, moduleID string) ([]domain.UserWithAssignment, error) {
+	// This function was previously implemented inefficiently, causing issues.
+	// It's now delegated to the assignment repository which has an optimized query
+	// to fetch students who have completed the module, along with their assignment data.
+	return uc.assignmentRepo.GetStudentsByModuleID(ctx, moduleID)
 }

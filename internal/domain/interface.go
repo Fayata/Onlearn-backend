@@ -14,6 +14,7 @@ type UserRepository interface {
 	GetByIDs(ctx context.Context, ids []uint) ([]User, error)
 	GetByRole(ctx context.Context, role Role) ([]User, error)
 	GetAll(ctx context.Context) ([]User, error)
+	SearchStudents(ctx context.Context, searchTerm string) ([]User, error)
 	Delete(ctx context.Context, id uint) error
 	CountByRole(ctx context.Context, role Role) (int64, error)
 }
@@ -54,6 +55,7 @@ type ModuleProgressRepository interface {
 	GetRecentByUser(ctx context.Context, userID uint, limit int) ([]ModuleProgress, error)
 	Update(ctx context.Context, progress *ModuleProgress) error
 	CountCompletedByUserAndCourse(ctx context.Context, userID uint, courseID uint) (int64, error)
+	GetCompletedByModuleID(ctx context.Context, moduleID string) ([]ModuleProgress, error)
 }
 
 type AssignmentRepository interface {
@@ -61,11 +63,13 @@ type AssignmentRepository interface {
 	GetByID(ctx context.Context, id uint) (*Assignment, error)
 	GetByUserAndModule(ctx context.Context, userID uint, moduleID string) (*Assignment, error)
 	GetByCourseID(ctx context.Context, courseID uint) ([]Assignment, error)
+	GetByModuleID(ctx context.Context, moduleID string) ([]Assignment, error)
 	GetUngradedByCourseID(ctx context.Context, courseID uint) ([]Assignment, error)
 	GetRecentSubmissions(ctx context.Context, limit int) ([]Assignment, error)
 	GetRecentSubmissionsByUserID(ctx context.Context, userID uint, limit int) ([]Assignment, error)
 	Update(ctx context.Context, assignment *Assignment) error
 	CountUngradedByInstructor(ctx context.Context, instructorID uint) (int64, error)
+	GetStudentsByModuleID(ctx context.Context, moduleID string) ([]UserWithAssignment, error)
 }
 
 type LabRepository interface {
@@ -142,6 +146,7 @@ type CourseUsecase interface {
 	SubmitAssignment(ctx context.Context, assignment *Assignment) error
 	GradeAssignment(ctx context.Context, assignmentID uint, grade float64, feedback string, gradedByID uint) error
 	GetCourseAssignments(ctx context.Context, courseID uint) ([]Assignment, error)
+	GetModuleStudents(ctx context.Context, moduleID string) ([]UserWithAssignment, error)
 
 	// Publish/Unpublish Course
 	PublishCourse(ctx context.Context, courseID uint, instructorID uint) error
@@ -165,6 +170,7 @@ type LabUsecase interface {
 	GetLabsWithUngradedCount(ctx context.Context) ([]LabWithUngradedCount, error)
 	GetCompletedLabsByUserID(ctx context.Context, userID uint) ([]LabGrade, error)
 	GetLabStudents(ctx context.Context, labID uint) ([]LabGrade, error)
+	SearchAllStudents(ctx context.Context, searchTerm string) ([]User, error)
 }
 
 type CertificateUsecase interface {

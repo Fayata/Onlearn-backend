@@ -93,6 +93,8 @@ func InitRouter(handler *Handler) *gin.Engine {
 			instructor.POST("/modules", handler.AddModule)
 			instructor.PUT("/modules/:id", handler.UpdateModule)
 			instructor.DELETE("/modules/:id", handler.DeleteModule)
+			instructor.GET("/courses/:id/students", handler.GetCourseStudents)
+			instructor.GET("/modules/:id/students", handler.GetModuleStudents)
 
 			// Grading
 			instructor.POST("/assignments/grade", handler.GradeAssignment)
@@ -114,6 +116,7 @@ func InitRouter(handler *Handler) *gin.Engine {
 
 			// Reports
 			instructor.GET("/students/performance", handler.GetAllStudentsPerformance)
+			instructor.GET("/students/search", handler.SearchAllStudents)
 		}
 
 		// ========== ADMIN ROUTES ==========

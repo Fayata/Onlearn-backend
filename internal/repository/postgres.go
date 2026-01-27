@@ -68,6 +68,19 @@ func (r *userRepo) GetAll(ctx context.Context) ([]domain.User, error) {
 	return users, err
 }
 
+func (r *userRepo) SearchStudents(ctx context.Context, searchTerm string) ([]domain.User, error) {
+	var users []domain.User
+	query := r.db.WithContext(ctx).Where("role = ?", domain.RoleStudent)
+	
+	if searchTerm != "" {
+		searchPattern := "%" + searchTerm + "%"
+		query = query.Where("name ILIKE ? OR email ILIKE ?", searchPattern, searchPattern)
+	}
+	
+	err := query.Order("name ASC").Find(&users).Error
+	return users, err
+}
+
 func (r *userRepo) Update(ctx context.Context, user *domain.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }
@@ -243,6 +256,15 @@ func (r *moduleProgressRepo) CountCompletedByUserAndCourse(ctx context.Context, 
 	return count, err
 }
 
+func (r *moduleProgressRepo) GetCompletedByModuleID(ctx context.Context, moduleID string) ([]domain.ModuleProgress, error) {
+	var progress []domain.ModuleProgress
+	err := r.db.WithContext(ctx).
+		Where("module_id = ? AND is_complete = ?", moduleID, true).
+		Order("updated_at DESC").
+		Find(&progress).Error
+	return progress, err
+}
+
 // ========== ASSIGNMENT REPOSITORY ==========
 
 type assignmentRepo struct {
@@ -278,6 +300,15 @@ func (r *assignmentRepo) GetByUserAndModule(ctx context.Context, userID uint, mo
 func (r *assignmentRepo) GetByCourseID(ctx context.Context, courseID uint) ([]domain.Assignment, error) {
 	var assignments []domain.Assignment
 	err := r.db.WithContext(ctx).Where("course_id = ?", courseID).
+		Preload("User").Preload("GradedBy").
+		Order("submitted_at DESC").
+		Find(&assignments).Error
+	return assignments, err
+}
+
+func (r *assignmentRepo) GetByModuleID(ctx context.Context, moduleID string) ([]domain.Assignment, error) {
+	var assignments []domain.Assignment
+	err := r.db.WithContext(ctx).Where("module_id = ?", moduleID).
 		Preload("User").Preload("GradedBy").
 		Order("submitted_at DESC").
 		Find(&assignments).Error
@@ -325,6 +356,52 @@ func (r *assignmentRepo) CountUngradedByInstructor(ctx context.Context, instruct
 		Where("courses.instructor_id = ? AND assignments.grade IS NULL", instructorID).
 		Count(&count).Error
 	return count, err
+}
+
+func (r *assignmentRepo) GetStudentsByModuleID(ctx context.Context, moduleID string) ([]domain.UserWithAssignment, error) {
+	type TempResult struct {
+		domain.User
+		AssignmentID   uint      `gorm:"column:assignment_id"`
+		FileURL        string
+		Grade          *float64
+		Feedback       string
+		SubmittedAt    time.Time
+		GradedAt       *time.Time
+	}
+
+	var tempResults []TempResult
+	err := r.db.WithContext(ctx).
+		Table("users").
+		Select("users.*, assignments.id as assignment_id, assignments.file_url, assignments.grade, assignments.feedback, assignments.submitted_at, assignments.graded_at").
+		Joins("LEFT JOIN assignments ON users.id = assignments.user_id AND assignments.module_id = ?", moduleID).
+		Where("users.id IN (SELECT user_id FROM module_progresses WHERE module_id = ? AND is_complete = ?)", moduleID, true).
+		Scan(&tempResults).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	var results []domain.UserWithAssignment
+	for _, temp := range tempResults {
+		userWithAssignment := domain.UserWithAssignment{
+			User: temp.User,
+		}
+		if temp.AssignmentID != 0 {
+			userWithAssignment.Assignment = &domain.Assignment{
+				ID:          temp.AssignmentID,
+				UserID:      temp.User.ID,
+				ModuleID:    moduleID,
+				FileURL:     temp.FileURL,
+				Grade:       temp.Grade,
+				Feedback:    temp.Feedback,
+				SubmittedAt: temp.SubmittedAt,
+				GradedAt:    temp.GradedAt,
+			}
+		}
+		results = append(results, userWithAssignment)
+	}
+
+	return results, nil
 }
 
 // ========== LAB REPOSITORY ==========

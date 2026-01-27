@@ -259,3 +259,10 @@ type StudentPerformance struct {
 	AverageGrade      float64 `json:"average_grade"`
 	TotalCertificates int     `json:"total_certificates"`
 }
+
+// UserWithAssignment - Student dengan data assignment untuk penilaian modul
+type UserWithAssignment struct {
+	User      User       `json:"user"`
+	Assignment *Assignment `json:"assignment,omitempty"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+}

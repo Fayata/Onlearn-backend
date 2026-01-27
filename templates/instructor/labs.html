@@ -559,15 +559,43 @@
         async function gradeStudents(labId) {
             try {
                 const token = getCookie('token');
-                const response = await fetch(`/api/v1/instructor/labs/${labId}/students`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                // Get all students (not just enrolled ones) for lab grading
+                const searchResponse = await fetch(`/api/v1/instructor/students/search?q=`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    displayLabStudents(labId, data.students || []);
+                
+                if (searchResponse.ok) {
+                    const searchData = await searchResponse.json();
+                    const allStudents = searchData.students || [];
+                    
+                    // Get lab grades to merge with student data
+                    const labResponse = await fetch(`/api/v1/instructor/labs/${labId}/students`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    let labGrades = [];
+                    if (labResponse.ok) {
+                        const labData = await labResponse.json();
+                        labGrades = labData.students || [];
+                    }
+                    
+                    // Merge: create map of studentID -> grade
+                    const gradeMap = {};
+                    labGrades.forEach(lg => {
+                        gradeMap[lg.user.id] = {
+                            grade: lg.grade,
+                            feedback: lg.feedback
+                        };
+                    });
+                    
+                    // Combine all students with their grades
+                    const studentsWithGrades = allStudents.map(student => ({
+                        User: student,
+                        Grade: gradeMap[student.id]?.grade || '',
+                        Feedback: gradeMap[student.id]?.feedback || ''
+                    }));
+                    
+                    displayLabStudents(labId, studentsWithGrades);
                     document.getElementById('gradeModalTitle').textContent = `Nilai Students - Lab ID ${labId}`;
                     document.getElementById('gradeModal').classList.remove('hidden');
                 } else {
@@ -582,13 +610,14 @@
         function displayLabStudents(labId, students) {
             const container = document.getElementById('ungradedStudentsList');
             if (students.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500 py-8">Belum ada student yang mendaftar di lab ini.</p>';
+                container.innerHTML = '<p class="text-center text-gray-500 py-8">Tidak ada student yang ditemukan.</p>';
                 return;
             }
 
             container.innerHTML = `
                 <div class="mb-4">
-                    <input type="text" id="studentSearch" onkeyup="searchStudents()" placeholder="Cari nama student..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="studentSearch" onkeyup="searchStudents(); searchStudentsAPI();" placeholder="Cari nama atau email student..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-2">Total: ${students.length} student - Ketik untuk mencari semua student</p>
                 </div>
                 <div id="student-list-items">
                     ${students.map(studentGrade => studentCard(labId, studentGrade)).join('')}
@@ -609,17 +638,17 @@
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 ${statusBadgeColor} rounded-full flex items-center justify-center text-white">
-                                <span class="font-bold">${student.Name ? student.Name.substring(0, 2).toUpperCase() : 'ST'}</span>
+                                <span class="font-bold">${student.name ? student.name.substring(0, 2).toUpperCase() : 'ST'}</span>
                             </div>
                             <div>
-                                <p class="student-name font-bold text-gray-800">${student.Name || 'Unknown'}</p>
-                                <p class="text-sm text-gray-600">${student.Email || ''}</p>
+                                <p class="student-name font-bold text-gray-800">${student.name || 'Unknown'}</p>
+                                <p class="student-email text-sm text-gray-600">${student.email || ''}</p>
                             </div>
                         </div>
                         <span class="px-3 py-1 ${statusBadgeColor} text-white text-xs font-bold rounded-full">${statusText}</span>
                     </div>
                     <div class="flex gap-3">
-                        <select id="grade_${student.ID}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
+                        <select id="grade_${student.id}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
                             <option value="">Pilih Nilai</option>
                             <option value="A" ${studentGrade.Grade === 'A' ? 'selected' : ''}>A (90-100)</option>
                             <option value="B" ${studentGrade.Grade === 'B' ? 'selected' : ''}>B (80-89)</option>
@@ -627,9 +656,9 @@
                             <option value="D" ${studentGrade.Grade === 'D' ? 'selected' : ''}>D (60-69)</option>
                             <option value="E" ${studentGrade.Grade === 'E' ? 'selected' : ''}>E (0-59)</option>
                         </select>
-                        <input type="text" id="feedback_${student.ID}" placeholder="Feedback (opsional)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg" value="${studentGrade.Feedback || ''}">
-                        <button onclick="saveLabGrade(${labId}, ${student.ID})" class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
-                            Simpan
+                        <input type="text" id="feedback_${student.id}" placeholder="Feedback (opsional)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg" value="${studentGrade.Feedback || ''}">
+                        <button onclick="saveLabGrade(${labId}, ${student.id})" class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
+                            ${isGraded ? 'Update' : 'Simpan'}
                         </button>
                     </div>
                 </div>
@@ -640,16 +669,79 @@
             const input = document.getElementById('studentSearch');
             const filter = input.value.toUpperCase();
             const list = document.getElementById('student-list-items');
+            if (!list) return;
+            
             const cards = list.getElementsByClassName('student-card');
-
             for (let i = 0; i < cards.length; i++) {
-                const name = cards[i].querySelector('.student-name');
-                if (name.innerText.toUpperCase().indexOf(filter) > -1) {
+                const nameEl = cards[i].querySelector('.student-name');
+                const emailEl = cards[i].querySelector('.student-email');
+                const name = nameEl ? nameEl.innerText.toUpperCase() : '';
+                const email = emailEl ? emailEl.innerText.toUpperCase() : '';
+                
+                if (name.indexOf(filter) > -1 || email.indexOf(filter) > -1) {
                     cards[i].style.display = "";
                 } else {
                     cards[i].style.display = "none";
                 }
             }
+        }
+        
+        // Real-time search with API
+        let searchTimeout;
+        async function searchStudentsAPI() {
+            clearTimeout(searchTimeout);
+            const input = document.getElementById('studentSearch');
+            const searchTerm = input.value;
+            
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const token = getCookie('token');
+                    const labId = document.getElementById('gradeModalTitle').textContent.match(/Lab ID (\d+)/)?.[1];
+                    if (!labId) return;
+                    
+                    const response = await fetch(`/api/v1/instructor/students/search?q=${encodeURIComponent(searchTerm)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const allStudents = data.students || [];
+                        
+                        // Get lab grades
+                        const labResponse = await fetch(`/api/v1/instructor/labs/${labId}/students`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        
+                        let labGrades = [];
+                        if (labResponse.ok) {
+                            const labData = await labResponse.json();
+                            labGrades = labData.students || [];
+                        }
+                        
+                        const gradeMap = {};
+                        labGrades.forEach(lg => {
+                            gradeMap[lg.user.id] = {
+                                grade: lg.grade,
+                                feedback: lg.feedback
+                            };
+                        });
+                        
+                        const studentsWithGrades = allStudents.map(student => ({
+                            User: student,
+                            Grade: gradeMap[student.id]?.grade || '',
+                            Feedback: gradeMap[student.id]?.feedback || ''
+                        }));
+                        
+                        const container = document.getElementById('ungradedStudentsList');
+                        const listItems = document.getElementById('student-list-items');
+                        if (listItems) {
+                            listItems.innerHTML = studentsWithGrades.map(sg => studentCard(parseInt(labId), sg)).join('');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
         }
 
         async function saveLabGrade(labId, studentId) {
