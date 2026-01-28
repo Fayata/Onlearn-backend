@@ -396,9 +396,8 @@ func (uc *courseUsecase) GetCourseAssignments(ctx context.Context, courseID uint
 	return uc.assignmentRepo.GetByCourseID(ctx, courseID)
 }
 
-func (uc *courseUsecase) GetModuleStudents(ctx context.Context, moduleID string) ([]domain.UserWithAssignment, error) {
-	// This function was previously implemented inefficiently, causing issues.
-	// It's now delegated to the assignment repository which has an optimized query
-	// to fetch students who have completed the module, along with their assignment data.
-	return uc.assignmentRepo.GetStudentsByModuleID(ctx, moduleID)
+func (uc *courseUsecase) GetModuleStudents(ctx context.Context, moduleID string, courseID uint) ([]domain.UserWithAssignment, error) {
+	// This function fetches all enrolled students in the course
+	// along with their assignment data and module completion status.
+	return uc.assignmentRepo.GetStudentsByModuleID(ctx, moduleID, courseID)
 }

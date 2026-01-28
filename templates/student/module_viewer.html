@@ -143,21 +143,20 @@
         
         <!-- PPT/Slide Viewer (always in DOM, shown/hidden based on type) -->
         <div id="pptViewer" class="slide-container" style="display: {{if eq .Module.Type "ppt"}}flex{{else}}none{{end}};">
-            <div class="relative w-full max-w-5xl">
+            <div class="relative w-full px-16" style="max-width: 95vw; max-height: calc(100vh - 180px);">
                 <!-- Slide Display -->
-                <div id="slideDisplay" class="bg-white rounded-lg shadow-2xl overflow-hidden aspect-video flex items-center justify-center">
+                <div id="slideDisplay" class="bg-white rounded-lg shadow-2xl overflow-hidden flex items-center justify-center" style="aspect-ratio: 16/9; max-height: calc(100vh - 200px); width: 100%;">
                     <p class="text-gray-500">Loading presentation...</p>
                 </div>
-                
                 <!-- Slide Navigation -->
-                <div class="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-16">
-                    <button onclick="prevSlide()" id="prevBtn" class="control-btn w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center">
-                        <i class="fas fa-chevron-left text-xl"></i>
+                <div class="absolute left-0 top-1/2 transform -translate-y-1/2">
+                    <button onclick="prevSlide()" id="prevBtn" class="control-btn w-14 h-14 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center">
+                        <i class="fas fa-chevron-left text-2xl"></i>
                     </button>
                 </div>
-                <div class="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-16">
-                    <button onclick="nextSlide()" id="nextBtn" class="control-btn w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center">
-                        <i class="fas fa-chevron-right text-xl"></i>
+                <div class="absolute right-0 top-1/2 transform -translate-y-1/2">
+                    <button onclick="nextSlide()" id="nextBtn" class="control-btn w-14 h-14 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center">
+                        <i class="fas fa-chevron-right text-2xl"></i>
                     </button>
                 </div>
             </div>
@@ -230,7 +229,7 @@
     <script>
         const moduleID = "{{.Module.ID}}";
         const courseID = {{.Course.ID}};
-        const moduleType = "{{.Module.Type}}";
+        const moduleType = "{{.Module.Type}}".toLowerCase(); // Normalize to lowercase
         const fileURL = "{{.FileURL}}";
         
         let pdfDoc = null;
@@ -283,9 +282,22 @@
                         showFallback();
                         return;
                     }
-                    // Show screen adjustment modal first
-                    showScreenAdjustModal();
-                    // Load PPT after screen size is selected
+                    
+                    // Ensure PPT viewer is visible
+                    pptViewer.style.display = 'flex';
+                    
+                    // Check if screen adjustment modal exists
+                    const modal = document.getElementById('screenAdjustModal');
+                    if (modal) {
+                        // Show screen adjustment modal
+                        modal.classList.remove('hidden');
+                        // Start loading PPT in background while showing modal
+                        loadPPT();
+                    } else {
+                        // Modal not found - load PPT directly with default settings
+                        console.log('Screen adjustment modal not found, loading PPT directly');
+                        loadPPT();
+                    }
                 } else {
                     console.warn('Unknown module type:', moduleType);
                     showFallback();
@@ -629,8 +641,8 @@
                     hideLoading();
                     const pptViewer = document.getElementById('pptViewer');
                     const pptControls = document.getElementById('pptControls');
-                    if (pptViewer) pptViewer.classList.remove('hidden');
-                    if (pptControls) pptControls.classList.remove('hidden');
+                    if (pptViewer) pptViewer.style.display = 'flex';
+                    if (pptControls) pptControls.style.display = 'flex';
                 } else {
                     // If we got some images but not all, still try to show them
                     if (slideImages.length > 0) {
@@ -641,8 +653,8 @@
                         hideLoading();
                         const pptViewer = document.getElementById('pptViewer');
                         const pptControls = document.getElementById('pptControls');
-                        if (pptViewer) pptViewer.classList.remove('hidden');
-                        if (pptControls) pptControls.classList.remove('hidden');
+                        if (pptViewer) pptViewer.style.display = 'flex';
+                        if (pptControls) pptControls.style.display = 'flex';
                         Toast.warning(`Hanya ${slideImages.length} dari ${totalSlides} slide yang berhasil dimuat`);
                     } else {
                         // Fallback: use iframe with blob
@@ -707,8 +719,8 @@
                 window.pptBlobURL = blobURL;
                 
                 hideLoading();
-                document.getElementById('pptViewer').classList.remove('hidden');
-                document.getElementById('pptControls').classList.add('hidden');
+                document.getElementById('pptViewer').style.display = 'flex';
+                document.getElementById('pptControls').style.display = 'none';
             })
             .catch(error => {
                 console.error('Error loading PPT:', error);
@@ -778,7 +790,7 @@
                 </div>
             `;
             hideLoading();
-            document.getElementById('pptViewer').classList.remove('hidden');
+            document.getElementById('pptViewer').style.display = 'flex';
         }
 
         // Screen adjustment functions
@@ -817,12 +829,10 @@
                 if (checkIcon) checkIcon.classList.remove('hidden');
             }
             
-            // Load PPT after selection
-            setTimeout(() => {
-                const pptViewer = document.getElementById('pptViewer');
-                if (pptViewer) pptViewer.style.display = 'flex';
-                loadPPT();
-            }, 300);
+            // Just update display if slides are already loaded
+            if (slideImages.length > 0) {
+                updateSlideDisplay();
+            }
         }
 
         // Load last slide from checkpoint
@@ -849,6 +859,12 @@
                         // Mark all slides up to last slide as read
                         for (let i = 1; i <= currentSlide; i++) {
                             readSlides.add(i);
+                        }
+                        // Show notification that we're resuming
+                        if (currentSlide > 1) {
+                            setTimeout(() => {
+                                Toast.info(`Melanjutkan dari halaman ${currentSlide} dari ${totalSlides}`);
+                            }, 500);
                         }
                     } else {
                         currentSlide = 1;

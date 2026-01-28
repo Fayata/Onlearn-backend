@@ -496,7 +496,7 @@
             
             try {
                 const token = getCookie('token');
-                const response = await fetch(`/api/v1/instructor/modules/${moduleId}/students`, {
+                const response = await fetch(`/api/v1/instructor/modules/${moduleId}/students?course_id=${courseId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -526,7 +526,7 @@
         function displayModuleStudents(moduleId, courseId, students) {
             const container = document.getElementById('moduleStudentsList');
             if (students.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500 py-8">Belum ada student yang menyelesaikan quiz modul ini.</p>';
+                container.innerHTML = '<p class="text-center text-gray-500 py-8">Belum ada student yang terdaftar di course ini.</p>';
                 return;
             }
 
@@ -543,11 +543,12 @@
             }
             const student = studentData.User;
             const assignment = studentData.Assignment;
+            const moduleCompleted = studentData.module_completed;
             const isGraded = assignment && assignment.grade !== null && assignment.grade !== undefined;
-            const cardBorderColor = isGraded ? 'border-green-200' : 'border-orange-200';
-            const cardBgColor = isGraded ? 'bg-green-50' : 'bg-orange-50';
-            const statusBadgeColor = isGraded ? 'bg-green-600' : 'bg-orange-600';
-            const statusText = isGraded ? `Sudah Dinilai: ${assignment.grade}` : 'Belum Dinilai';
+            const cardBorderColor = isGraded ? 'border-green-200' : (moduleCompleted ? 'border-blue-200' : 'border-gray-200');
+            const cardBgColor = isGraded ? 'bg-green-50' : (moduleCompleted ? 'bg-blue-50' : 'bg-gray-50');
+            const statusBadgeColor = isGraded ? 'bg-green-600' : (moduleCompleted ? 'bg-blue-600' : 'bg-gray-500');
+            const statusText = isGraded ? `Nilai: ${assignment.grade}` : (moduleCompleted ? 'Modul Selesai' : 'Belum Selesai');
             const completedDate = assignment && assignment.submitted_at ? new Date(assignment.submitted_at).toLocaleDateString('id-ID') : '-';
 
             return `
@@ -560,7 +561,7 @@
                             <div>
                                 <p class="module-student-name font-bold text-gray-800">${student.name || 'Unknown'}</p>
                                 <p class="text-sm text-gray-600">${student.email || ''}</p>
-                                <p class="text-xs text-gray-500 mt-1">Selesai: ${completedDate}</p>
+                                ${moduleCompleted ? '<p class="text-xs text-blue-600 mt-1"><i class="fas fa-check-circle mr-1"></i>Modul selesai dikerjakan</p>' : '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-clock mr-1"></i>Modul belum selesai</p>'}
                             </div>
                         </div>
                         <span class="px-3 py-1 ${statusBadgeColor} text-white text-xs font-bold rounded-full">${statusText}</span>
@@ -639,7 +640,7 @@
                         return;
                     }
                     
-                    const refreshResponse = await fetch(`/api/v1/instructor/modules/${moduleId}/students`, {
+                    const refreshResponse = await fetch(`/api/v1/instructor/modules/${moduleId}/students?course_id=${courseId}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (refreshResponse.ok) {

@@ -116,13 +116,69 @@ func (uc *labUsecase) StudentEnroll(ctx context.Context, userID, labID uint) err
 	grade := &domain.LabGrade{
 		UserID: userID,
 		LabID:  labID,
-		Grade:  "", // Empty = not graded yet
+		Grade:  nil, // nil = not graded yet
 	}
 
 	return uc.labRepo.CreateGrade(ctx, grade)
 }
 
-func (uc *labUsecase) SubmitGrade(ctx context.Context, instructorID, userID, labID uint, grade string, feedback string) error {
+// AddStudentToLab - Instructor adds a student to a lab
+func (uc *labUsecase) AddStudentToLab(ctx context.Context, userID, labID uint) error {
+	// Check if student exists
+	student, err := uc.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return errors.New("student not found")
+	}
+	if student.Role != domain.RoleStudent {
+		return errors.New("user is not a student")
+	}
+
+	// Check if already enrolled
+	existing, err := uc.labRepo.GetGrade(ctx, userID, labID)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		return errors.New("student already enrolled in this lab")
+	}
+
+	// Verify lab exists
+	_, err = uc.labRepo.GetByID(ctx, labID)
+	if err != nil {
+		return errors.New("lab not found")
+	}
+
+	// Create grade entry (ungraded initially)
+	grade := &domain.LabGrade{
+		UserID: userID,
+		LabID:  labID,
+		Grade:  nil, // nil = not graded yet
+	}
+
+	return uc.labRepo.CreateGrade(ctx, grade)
+}
+
+// RemoveStudentFromLab - Instructor removes a student from a lab
+func (uc *labUsecase) RemoveStudentFromLab(ctx context.Context, userID, labID uint) error {
+	// Verify lab exists
+	_, err := uc.labRepo.GetByID(ctx, labID)
+	if err != nil {
+		return errors.New("lab not found")
+	}
+
+	// Check if student is enrolled
+	existing, err := uc.labRepo.GetGrade(ctx, userID, labID)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return errors.New("student is not enrolled in this lab")
+	}
+
+	return uc.labRepo.DeleteGrade(ctx, userID, labID)
+}
+
+func (uc *labUsecase) SubmitGrade(ctx context.Context, instructorID, userID, labID uint, grade *float64, feedback string) error {
 	// Verify instructor exists
 	instructor, err := uc.userRepo.GetByID(ctx, instructorID)
 	if err != nil {
@@ -160,9 +216,8 @@ func (uc *labUsecase) SubmitGrade(ctx context.Context, instructorID, userID, lab
 		}
 	}
 
-	// Auto-generate certificate if grade is good (e.g., A or B)
-	// You can customize this logic
-	if grade == "A" || grade == "B" {
+	// Auto-generate certificate if grade is good (e.g., >= 75)
+	if grade != nil && *grade >= 75 {
 		uc.certRepo.Create(ctx, &domain.Certificate{
 			UserID: userID,
 			LabID:  &labID,
@@ -183,7 +238,7 @@ func (uc *labUsecase) GetUngradedStudents(ctx context.Context, labID uint) ([]do
 
 	var ungradedUserIDs []uint
 	for _, g := range grades {
-		if g.Grade == "" {
+		if g.Grade == nil {
 			ungradedUserIDs = append(ungradedUserIDs, g.UserID)
 		}
 	}
@@ -219,15 +274,25 @@ func (uc *labUsecase) GetLabsWithUngradedCount(ctx context.Context) ([]domain.La
 }
 
 func (uc *labUsecase) GetCompletedLabsByUserID(ctx context.Context, userID uint) ([]domain.LabGrade, error) {
+	// Return all enrolled labs (both graded and ungraded)
 	grades, err := uc.labRepo.GetGradesByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter only completed labs (those with grade filled)
+	return grades, nil
+}
+
+func (uc *labUsecase) GetGradedLabsByUserID(ctx context.Context, userID uint) ([]domain.LabGrade, error) {
+	grades, err := uc.labRepo.GetGradesByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter only graded labs
 	var completed []domain.LabGrade
 	for _, grade := range grades {
-		if grade.Grade != "" {
+		if grade.Grade != nil {
 			completed = append(completed, grade)
 		}
 	}

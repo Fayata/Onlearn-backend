@@ -180,23 +180,31 @@
                                     <i class="fas fa-clipboard-check"></i>
                                     Nilai ({{.UngradedCount}} Pending)
                                 </button>
+                                <button onclick="viewLabStudents({{.ID}})" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2">
+                                    <i class="fas fa-users-cog"></i>
+                                    Kelola Students
+                                </button>
                                 <button onclick="changeLabStatus({{.ID}}, 'closed')" class="px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center gap-2">
                                     <i class="fas fa-lock"></i>
                                     Tutup Lab
                                 </button>
                             {{else if eq .Status "scheduled"}}
                                 <button onclick="viewLabStudents({{.ID}})" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
-                                    <i class="fas fa-users"></i>
-                                    Lihat Students
+                                    <i class="fas fa-users-cog"></i>
+                                    Kelola Students
                                 </button>
                                 <button onclick="changeLabStatus({{.ID}}, 'open')" class="px-4 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2">
                                     <i class="fas fa-play"></i>
                                     Mulai Lab
                                 </button>
                             {{else}}
-                                <button onclick="viewLabStudents({{.ID}})" class="flex-1 px-4 py-2.5 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2">
+                                <button onclick="viewLabStudents({{.ID}})" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-users"></i>
+                                    Lihat Students
+                                </button>
+                                <button onclick="gradeStudents({{.ID}})" class="px-4 py-2.5 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors flex items-center gap-2">
                                     <i class="fas fa-chart-bar"></i>
-                                    Lihat Hasil & Statistik
+                                    Lihat Hasil
                                 </button>
                             {{end}}
                             <button onclick="openEditLabModal({{.ID}})" class="p-2.5 text-gray-600 hover:text-gray-900">
@@ -292,6 +300,44 @@
             <div class="p-6">
                 <div id="ungradedStudentsList" class="space-y-4">
                     <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Lab Students Modal -->
+    <div id="manageStudentsModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800" id="manageStudentsTitle">Kelola Students</h3>
+                    <p class="text-sm text-gray-500">Tambah atau hapus student dari lab ini</p>
+                </div>
+                <button onclick="closeManageStudentsModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6">
+                <!-- Add Student Section -->
+                <div class="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <h4 class="font-semibold text-gray-800 mb-3"><i class="fas fa-user-plus text-blue-600 mr-2"></i>Tambah Student</h4>
+                    <div class="flex gap-3">
+                        <div class="flex-1 relative">
+                            <input type="text" id="searchStudentInput" onkeyup="searchStudentToAdd()" placeholder="Cari nama atau email student..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <div id="searchStudentResults" class="hidden absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg z-20">
+                                <!-- Search results will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Students Section -->
+                <div>
+                    <h4 class="font-semibold text-gray-800 mb-3"><i class="fas fa-users text-gray-600 mr-2"></i>Student Terdaftar</h4>
+                    <div id="labStudentsList" class="space-y-3">
+                        <!-- Student list will be populated here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -627,14 +673,14 @@
 
         function studentCard(labId, studentGrade) {
             const student = studentGrade.User;
-            const isGraded = studentGrade.Grade && studentGrade.Grade !== "";
+            const isGraded = studentGrade.Grade !== null && studentGrade.Grade !== undefined;
             const cardBorderColor = isGraded ? 'border-green-200' : 'border-orange-200';
             const cardBgColor = isGraded ? 'bg-green-50' : 'bg-orange-50';
             const statusBadgeColor = isGraded ? 'bg-green-600' : 'bg-orange-600';
-            const statusText = isGraded ? `Dinilai: ${studentGrade.Grade}` : 'Belum Dinilai';
+            const statusText = isGraded ? `Nilai: ${studentGrade.Grade}` : 'Belum Dinilai';
 
             return `
-                <div class="student-card border-2 ${cardBorderColor} rounded-xl p-4 ${cardBgColor}">
+                <div class="student-card border-2 ${cardBorderColor} rounded-xl p-4 ${cardBgColor} mb-3">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 ${statusBadgeColor} rounded-full flex items-center justify-center text-white">
@@ -647,19 +693,30 @@
                         </div>
                         <span class="px-3 py-1 ${statusBadgeColor} text-white text-xs font-bold rounded-full">${statusText}</span>
                     </div>
-                    <div class="flex gap-3">
-                        <select id="grade_${student.id}" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg">
-                            <option value="">Pilih Nilai</option>
-                            <option value="A" ${studentGrade.Grade === 'A' ? 'selected' : ''}>A (90-100)</option>
-                            <option value="B" ${studentGrade.Grade === 'B' ? 'selected' : ''}>B (80-89)</option>
-                            <option value="C" ${studentGrade.Grade === 'C' ? 'selected' : ''}>C (70-79)</option>
-                            <option value="D" ${studentGrade.Grade === 'D' ? 'selected' : ''}>D (60-69)</option>
-                            <option value="E" ${studentGrade.Grade === 'E' ? 'selected' : ''}>E (0-59)</option>
-                        </select>
-                        <input type="text" id="feedback_${student.id}" placeholder="Feedback (opsional)" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg" value="${studentGrade.Feedback || ''}">
-                        <button onclick="saveLabGrade(${labId}, ${student.id})" class="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700">
-                            ${isGraded ? 'Update' : 'Simpan'}
-                        </button>
+                    
+                    ${isGraded && studentGrade.Feedback ? `
+                    <div class="mb-3 p-3 bg-white rounded-lg border border-gray-200">
+                        <p class="text-xs text-gray-500 font-semibold mb-1"><i class="fas fa-comment-alt mr-1"></i> Feedback yang sudah diberikan:</p>
+                        <p class="text-sm text-gray-700 italic">"${studentGrade.Feedback}"</p>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Nilai (0-100)</label>
+                            <input type="number" id="grade_${student.id}" min="0" max="100" step="0.01" placeholder="0-100" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                                value="${studentGrade.Grade !== null && studentGrade.Grade !== undefined ? studentGrade.Grade : ''}">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs text-gray-500 mb-1">Feedback / Komentar</label>
+                            <input type="text" id="feedback_${student.id}" placeholder="Masukkan feedback untuk student..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" value="${studentGrade.Feedback || ''}">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="saveLabGrade(${labId}, ${student.id})" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                                <i class="fas fa-save mr-1"></i> ${isGraded ? 'Update' : 'Simpan'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -745,11 +802,17 @@
         }
 
         async function saveLabGrade(labId, studentId) {
-            const grade = document.getElementById(`grade_${studentId}`).value;
+            const gradeInput = document.getElementById(`grade_${studentId}`).value;
             const feedback = document.getElementById(`feedback_${studentId}`).value;
 
-            if (!grade) {
-                Toast.warning('Pilih nilai terlebih dahulu');
+            if (!gradeInput) {
+                Toast.warning('Masukkan nilai terlebih dahulu (0-100)');
+                return;
+            }
+
+            const grade = parseFloat(gradeInput);
+            if (isNaN(grade) || grade < 0 || grade > 100) {
+                Toast.warning('Nilai harus antara 0-100');
                 return;
             }
 
@@ -786,9 +849,192 @@
             document.getElementById('gradeModal').classList.add('hidden');
         }
 
-        function viewLabStudents(labId) {
-            Toast.info(`Melihat daftar students di lab ${labId}`);
+        let currentManageLabId = null;
+        
+        async function viewLabStudents(labId) {
+            currentManageLabId = labId;
+            document.getElementById('manageStudentsTitle').textContent = `Kelola Students - Lab ID ${labId}`;
+            document.getElementById('manageStudentsModal').classList.remove('hidden');
+            await loadLabStudents(labId);
         }
+
+        function closeManageStudentsModal() {
+            document.getElementById('manageStudentsModal').classList.add('hidden');
+            document.getElementById('searchStudentInput').value = '';
+            document.getElementById('searchStudentResults').classList.add('hidden');
+            currentManageLabId = null;
+        }
+
+        async function loadLabStudents(labId) {
+            try {
+                const token = getCookie('token');
+                const response = await fetch(`/api/v1/instructor/labs/${labId}/students`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const container = document.getElementById('labStudentsList');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const students = data.students || [];
+
+                    if (students.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-user-slash text-4xl mb-3"></i>
+                                <p>Belum ada student terdaftar di lab ini</p>
+                                <p class="text-sm">Gunakan pencarian di atas untuk menambahkan student</p>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = students.map(grade => `
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 ${grade.grade ? 'bg-green-600' : 'bg-blue-600'} rounded-full flex items-center justify-center text-white font-bold">
+                                        ${grade.user.name ? grade.user.name.substring(0, 2).toUpperCase() : 'ST'}
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-gray-800">${grade.user.name || 'Unknown'}</p>
+                                        <p class="text-sm text-gray-500">${grade.user.email || ''}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    ${grade.grade ? `
+                                        <span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
+                                            Nilai: ${grade.grade}
+                                        </span>
+                                    ` : `
+                                        <span class="px-3 py-1 bg-orange-100 text-orange-700 text-sm font-semibold rounded-full">
+                                            Belum Dinilai
+                                        </span>
+                                    `}
+                                    <button onclick="removeStudentFromLab(${labId}, ${grade.user.id}, '${grade.user.name}')" class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors" title="Hapus dari Lab">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    container.innerHTML = '<p class="text-center text-red-500 py-4">Gagal memuat daftar student</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('labStudentsList').innerHTML = '<p class="text-center text-red-500 py-4">Terjadi kesalahan koneksi</p>';
+            }
+        }
+
+        let searchStudentTimeout;
+        async function searchStudentToAdd() {
+            clearTimeout(searchStudentTimeout);
+            const input = document.getElementById('searchStudentInput');
+            const searchTerm = input.value.trim();
+            const resultsContainer = document.getElementById('searchStudentResults');
+
+            if (searchTerm.length < 2) {
+                resultsContainer.classList.add('hidden');
+                return;
+            }
+
+            searchStudentTimeout = setTimeout(async () => {
+                try {
+                    const token = getCookie('token');
+                    const response = await fetch(`/api/v1/instructor/students/search?q=${encodeURIComponent(searchTerm)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const students = data.students || [];
+
+                        if (students.length === 0) {
+                            resultsContainer.innerHTML = '<p class="p-3 text-gray-500 text-center">Tidak ada student ditemukan</p>';
+                        } else {
+                            resultsContainer.innerHTML = students.map(student => `
+                                <div onclick="addStudentToLab(${currentManageLabId}, ${student.id}, '${student.name}')" 
+                                     class="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                        ${student.name ? student.name.substring(0, 2).toUpperCase() : 'ST'}
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-gray-800">${student.name || 'Unknown'}</p>
+                                        <p class="text-sm text-gray-500">${student.email || ''}</p>
+                                    </div>
+                                </div>
+                            `).join('');
+                        }
+                        resultsContainer.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        }
+
+        async function addStudentToLab(labId, studentId, studentName) {
+            try {
+                const token = getCookie('token');
+                const response = await fetch(`/api/v1/instructor/labs/${labId}/students`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ user_id: studentId })
+                });
+
+                if (response.ok) {
+                    Toast.success(`${studentName} berhasil ditambahkan ke lab`);
+                    document.getElementById('searchStudentInput').value = '';
+                    document.getElementById('searchStudentResults').classList.add('hidden');
+                    await loadLabStudents(labId);
+                } else {
+                    const error = await response.json();
+                    Toast.error(error.error || 'Gagal menambahkan student');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Toast.error('Terjadi kesalahan koneksi');
+            }
+        }
+
+        async function removeStudentFromLab(labId, studentId, studentName) {
+            NotificationDialog.confirm(
+                `Apakah Anda yakin ingin menghapus <strong>${studentName}</strong> dari lab ini? Nilai yang sudah diberikan juga akan dihapus.`,
+                async () => {
+                    try {
+                        const token = getCookie('token');
+                        const response = await fetch(`/api/v1/instructor/labs/${labId}/students/${studentId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (response.ok) {
+                            Toast.success(`${studentName} berhasil dihapus dari lab`);
+                            await loadLabStudents(labId);
+                        } else {
+                            const error = await response.json();
+                            Toast.error(error.error || 'Gagal menghapus student');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        Toast.error('Terjadi kesalahan koneksi');
+                    }
+                },
+                'Hapus Student dari Lab'
+            );
+        }
+
+        // Close search results when clicking outside
+        document.addEventListener('click', function(event) {
+            const searchInput = document.getElementById('searchStudentInput');
+            const searchResults = document.getElementById('searchStudentResults');
+            if (searchInput && searchResults && !searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
 
         async function changeLabStatus(labId, status) {
             NotificationDialog.confirm(

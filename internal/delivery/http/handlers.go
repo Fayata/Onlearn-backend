@@ -988,10 +988,10 @@ func (h *Handler) SubmitLabGrade(c *gin.Context) {
 	}
 
 	var req struct {
-		LabID     uint   `json:"lab_id" binding:"required"`
-		StudentID uint   `json:"student_id" binding:"required"`
-		Grade     string `json:"grade" binding:"required"`
-		Feedback  string `json:"feedback"`
+		LabID     uint     `json:"lab_id" binding:"required"`
+		StudentID uint     `json:"student_id" binding:"required"`
+		Grade     *float64 `json:"grade"`
+		Feedback  string   `json:"feedback"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -1048,6 +1048,54 @@ func (h *Handler) GetLabStudents(c *gin.Context) {
 	})
 }
 
+func (h *Handler) AddStudentToLab(c *gin.Context) {
+	idStr := c.Param("id")
+	labID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lab ID"})
+		return
+	}
+
+	var req struct {
+		UserID uint `json:"user_id" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
+		return
+	}
+
+	if err := h.LabUsecase.AddStudentToLab(c.Request.Context(), req.UserID, uint(labID)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Student added to lab successfully"})
+}
+
+func (h *Handler) RemoveStudentFromLab(c *gin.Context) {
+	idStr := c.Param("id")
+	labID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid lab ID"})
+		return
+	}
+
+	userIDStr := c.Param("user_id")
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	if err := h.LabUsecase.RemoveStudentFromLab(c.Request.Context(), uint(userID), uint(labID)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Student removed from lab successfully"})
+}
+
 func (h *Handler) GetCourseStudents(c *gin.Context) {
 	idStr := c.Param("id")
 	courseID, err := strconv.ParseUint(idStr, 10, 32)
@@ -1069,10 +1117,21 @@ func (h *Handler) GetCourseStudents(c *gin.Context) {
 }
 
 func (h *Handler) GetModuleStudents(c *gin.Context) {
-	idStr := c.Param("id")
-	moduleID := idStr
+	moduleID := c.Param("id")
+	courseIDStr := c.Query("course_id")
 	
-	students, err := h.CourseUsecase.GetModuleStudents(c.Request.Context(), moduleID)
+	if courseIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "course_id is required"})
+		return
+	}
+	
+	courseID, err := strconv.ParseUint(courseIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid course_id"})
+		return
+	}
+	
+	students, err := h.CourseUsecase.GetModuleStudents(c.Request.Context(), moduleID, uint(courseID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

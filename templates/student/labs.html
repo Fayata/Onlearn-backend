@@ -21,7 +21,8 @@
     </script>
 </head>
 <body class="bg-gray-50">
-    
+    {{template "toast.html" .}}
+    {{template "notification_dialog.html" .}}
     {{template "sidebar.html" .}}
     {{template "header.html" .}}
 
@@ -56,56 +57,95 @@
                     {{ $btnText := "Belum Dibuka" }}
                     {{ $action := "" }}
 
-                    {{ if eq .Status "Open" }}
+                    {{ if eq .Status "open" }}
                         {{ $statusColor = "bg-green-100 text-green-700" }}
                         {{ $statusIcon = "fa-check-circle" }}
                         {{ $cardBorder = "border-green-400" }}
                         {{ $btnClass = "bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-200" }}
-                        {{ $btnText = "Mulai Lab" }}
-                        {{ $action = "startLab" }}
-                    {{ else if eq .Status "Scheduled" }}
+                        {{ $btnText = "Daftar Lab" }}
+                        {{ $action = "enrollLab" }}
+                    {{ else if eq .Status "scheduled" }}
                         {{ $statusColor = "bg-blue-100 text-blue-700" }}
                         {{ $statusIcon = "fa-calendar-alt" }}
                         {{ $cardBorder = "border-blue-400" }}
                         {{ $btnClass = "bg-blue-600 text-white hover:bg-blue-700" }}
-                        {{ $btnText = "Lihat Detail" }}
+                        {{ $btnText = "Terjadwal" }}
                         {{ $action = "viewDetail" }}
-                    {{ else if eq .Status "Closed" }}
+                    {{ else if eq .Status "closed" }}
                         {{ $statusColor = "bg-red-100 text-red-700" }}
                         {{ $statusIcon = "fa-lock" }}
-                        {{ $cardBorder = "border-gray-200 opacity-75" }}
+                        {{ $cardBorder = "border-gray-200" }}
                         {{ $btnClass = "bg-gray-800 text-white hover:bg-gray-900" }}
-                        {{ $btnText = "Lihat Hasil" }}
-                        {{ $action = "viewResult" }}
+                        {{ $btnText = "Lab Selesai" }}
+                        {{ $action = "" }}
                     {{ end }}
 
                 <div class="bg-white rounded-xl shadow-sm border-t-4 {{$cardBorder}} p-6 hover:shadow-md transition-all">
                     <div class="flex justify-between items-start mb-4">
                         <div class="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center text-xl text-gray-600">
-                            <i class="fas fa-network-wired"></i>
+                            <i class="fas fa-flask"></i>
                         </div>
-                        <span class="px-3 py-1 rounded-full text-xs font-bold {{$statusColor}} flex items-center gap-2">
-                            <i class="fas {{$statusIcon}}"></i> {{.Status}}
-                        </span>
+                        <div class="flex flex-col items-end gap-2">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold {{$statusColor}} flex items-center gap-2">
+                                <i class="fas {{$statusIcon}}"></i> {{.Status}}
+                            </span>
+                            {{if .IsEnrolled}}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700">
+                                <i class="fas fa-user-check"></i> Terdaftar
+                            </span>
+                            {{end}}
+                        </div>
                     </div>
 
                     <h3 class="text-lg font-bold text-gray-800 mb-2 line-clamp-1">{{.Title}}</h3>
-                    <p class="text-sm text-gray-500 mb-6 line-clamp-2">{{.Description}}</p>
+                    <p class="text-sm text-gray-500 mb-4 line-clamp-2">{{.Description}}</p>
 
-                    <div class="space-y-3 mb-6">
-                        <div class="flex items-center text-sm text-gray-600">
-                            <i class="fas fa-play w-6 text-center text-green-500"></i>
-                            <span>{{.StartTime.Format "02 Jan 2006, 15:04"}} WIB</span>
-                        </div>
-                        <div class="flex items-center text-sm text-gray-600">
-                            <i class="fas fa-stop w-6 text-center text-red-500"></i>
-                            <span>{{.EndTime.Format "02 Jan 2006, 15:04"}} WIB</span>
+                    <!-- Schedule Info -->
+                    <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                        <p class="text-xs text-gray-500 font-semibold mb-2"><i class="fas fa-calendar-alt mr-1"></i> Jadwal Lab</p>
+                        <div class="space-y-1">
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-play w-5 text-center text-green-500 text-xs"></i>
+                                <span class="font-medium">Mulai:</span>
+                                <span class="ml-2">{{.StartTime.Format "02 Jan 2006, 15:04"}} WIB</span>
+                            </div>
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-stop w-5 text-center text-red-500 text-xs"></i>
+                                <span class="font-medium">Selesai:</span>
+                                <span class="ml-2">{{.EndTime.Format "02 Jan 2006, 15:04"}} WIB</span>
+                            </div>
                         </div>
                     </div>
 
-                    <button {{if ne $action ""}}onclick="{{$action}}({{.ID}})"{{end}} class="w-full py-2.5 rounded-lg font-semibold transition-all {{$btnClass}}">
-                        {{$btnText}}
-                    </button>
+                    <!-- Grade Info (if enrolled and graded) -->
+                    {{if .IsGraded}}
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-sm font-semibold text-green-800"><i class="fas fa-award mr-1"></i> Hasil Penilaian</p>
+                            <span class="text-2xl font-bold text-green-600">{{printf "%.1f" .Grade}}</span>
+                        </div>
+                        {{if .Feedback}}
+                        <div class="mt-2 pt-2 border-t border-green-200">
+                            <p class="text-xs text-green-700 font-semibold mb-1">Feedback Instructor:</p>
+                            <p class="text-sm text-green-800 italic">"{{.Feedback}}"</p>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{else if .IsEnrolled}}
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                        <p class="text-sm text-orange-700"><i class="fas fa-hourglass-half mr-1"></i> Menunggu penilaian dari instructor</p>
+                    </div>
+                    {{end}}
+
+                    {{if .IsEnrolled}}
+                        <button disabled class="w-full py-2.5 rounded-lg font-semibold transition-all bg-gray-200 text-gray-500 cursor-not-allowed">
+                            <i class="fas fa-check mr-1"></i> Sudah Terdaftar
+                        </button>
+                    {{else}}
+                        <button {{if ne $action ""}}onclick="{{$action}}({{.ID}}, '{{.Title}}')"{{end}} class="w-full py-2.5 rounded-lg font-semibold transition-all {{$btnClass}}">
+                            {{$btnText}}
+                        </button>
+                    {{end}}
                 </div>
                 {{else}}
                 <div class="col-span-3 text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
@@ -141,22 +181,43 @@
         }
 
         // Action Handlers
-        function startLab(id) {
+        function enrollLab(id, title) {
             NotificationDialog.confirm(
-                'Apakah Anda siap memulai sesi lab ini? Waktu akan berjalan dan tidak bisa dihentikan.',
-                () => {
-                    // Logic to start the lab, e.g., redirect.
-                    // window.location.href = `/student/labs/${id}/start`;
-                    NotificationDialog.alert('Mengarahkan ke environment lab...', 'Mulai Lab');
+                `Apakah Anda ingin mendaftar ke lab <strong>"${title}"</strong>?`,
+                async () => {
+                    try {
+                        const token = getCookie('token');
+                        const response = await fetch(`/api/v1/student/labs/${id}/enroll`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (response.ok) {
+                            Toast.success('Berhasil mendaftar ke lab!');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            const error = await response.json();
+                            Toast.error(error.error || 'Gagal mendaftar ke lab');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        Toast.error('Terjadi kesalahan koneksi');
+                    }
                 },
-                'Mulai Sesi Lab?'
+                'Daftar Lab'
             );
         }
+
         function viewDetail(id) {
-            NotificationDialog.alert('Detail untuk lab ini belum tersedia.', 'Info Lab');
+            NotificationDialog.alert('Lab ini belum dibuka. Silakan tunggu hingga jadwal dimulai.', 'Info Lab');
         }
-        function viewResult(id) {
-            NotificationDialog.alert('Hasil lab Anda belum dipublikasikan oleh instruktur.', 'Hasil Lab');
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
         }
     </script>
 </body>

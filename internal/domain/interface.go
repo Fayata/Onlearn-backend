@@ -69,7 +69,7 @@ type AssignmentRepository interface {
 	GetRecentSubmissionsByUserID(ctx context.Context, userID uint, limit int) ([]Assignment, error)
 	Update(ctx context.Context, assignment *Assignment) error
 	CountUngradedByInstructor(ctx context.Context, instructorID uint) (int64, error)
-	GetStudentsByModuleID(ctx context.Context, moduleID string) ([]UserWithAssignment, error)
+	GetStudentsByModuleID(ctx context.Context, moduleID string, courseID uint) ([]UserWithAssignment, error)
 }
 
 type LabRepository interface {
@@ -88,6 +88,7 @@ type LabRepository interface {
 	GetGradesByUserID(ctx context.Context, userID uint) ([]LabGrade, error)
 	GetGradesByLabID(ctx context.Context, labID uint) ([]LabGrade, error)
 	CountUngradedByLabID(ctx context.Context, labID uint) (int64, error)
+	DeleteGrade(ctx context.Context, userID, labID uint) error
 }
 
 type CertificateRepository interface {
@@ -148,7 +149,7 @@ type CourseUsecase interface {
 	SubmitAssignment(ctx context.Context, assignment *Assignment) error
 	GradeAssignment(ctx context.Context, assignmentID uint, grade float64, feedback string, gradedByID uint) error
 	GetCourseAssignments(ctx context.Context, courseID uint) ([]Assignment, error)
-	GetModuleStudents(ctx context.Context, moduleID string) ([]UserWithAssignment, error)
+	GetModuleStudents(ctx context.Context, moduleID string, courseID uint) ([]UserWithAssignment, error)
 
 	// Publish/Unpublish Course
 	PublishCourse(ctx context.Context, courseID uint, instructorID uint) error
@@ -164,14 +165,18 @@ type LabUsecase interface {
 	GetUpcomingLabs(ctx context.Context) ([]Lab, error)
 	DeleteLab(ctx context.Context, labID uint) error
 
-	// Grading
+	// Student Management in Labs
 	StudentEnroll(ctx context.Context, userID, labID uint) error
-	SubmitGrade(ctx context.Context, instructorID, userID, labID uint, grade string, feedback string) error
+	AddStudentToLab(ctx context.Context, userID, labID uint) error
+	RemoveStudentFromLab(ctx context.Context, userID, labID uint) error
+	GetLabStudents(ctx context.Context, labID uint) ([]LabGrade, error)
+
+	// Grading
+	SubmitGrade(ctx context.Context, instructorID, userID, labID uint, grade *float64, feedback string) error
 	GetUngradedStudents(ctx context.Context, labID uint) ([]User, error)
 	GetUngradedCountByLabID(ctx context.Context, labID uint) (int64, error)
 	GetLabsWithUngradedCount(ctx context.Context) ([]LabWithUngradedCount, error)
 	GetCompletedLabsByUserID(ctx context.Context, userID uint) ([]LabGrade, error)
-	GetLabStudents(ctx context.Context, labID uint) ([]LabGrade, error)
 	SearchAllStudents(ctx context.Context, searchTerm string) ([]User, error)
 }
 

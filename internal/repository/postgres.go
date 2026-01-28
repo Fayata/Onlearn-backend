@@ -358,23 +358,33 @@ func (r *assignmentRepo) CountUngradedByInstructor(ctx context.Context, instruct
 	return count, err
 }
 
-func (r *assignmentRepo) GetStudentsByModuleID(ctx context.Context, moduleID string) ([]domain.UserWithAssignment, error) {
+func (r *assignmentRepo) GetStudentsByModuleID(ctx context.Context, moduleID string, courseID uint) ([]domain.UserWithAssignment, error) {
 	type TempResult struct {
 		domain.User
-		AssignmentID   uint      `gorm:"column:assignment_id"`
-		FileURL        string
-		Grade          *float64
-		Feedback       string
-		SubmittedAt    time.Time
-		GradedAt       *time.Time
+		AssignmentID    uint       `gorm:"column:assignment_id"`
+		FileURL         string
+		Grade           *float64
+		Feedback        string
+		SubmittedAt     time.Time
+		GradedAt        *time.Time
+		ModuleCompleted bool       `gorm:"column:module_completed"`
 	}
 
 	var tempResults []TempResult
+	// Fetch all enrolled students in the course, with their assignment data and module completion status
 	err := r.db.WithContext(ctx).
 		Table("users").
-		Select("users.*, assignments.id as assignment_id, assignments.file_url, assignments.grade, assignments.feedback, assignments.submitted_at, assignments.graded_at").
+		Select(`users.*, 
+			assignments.id as assignment_id, 
+			assignments.file_url, 
+			assignments.grade, 
+			assignments.feedback, 
+			assignments.submitted_at, 
+			assignments.graded_at,
+			CASE WHEN EXISTS(SELECT 1 FROM module_progresses WHERE module_progresses.user_id = users.id AND module_progresses.module_id = ? AND module_progresses.is_complete = true) THEN true ELSE false END as module_completed`, moduleID).
+		Joins("INNER JOIN enrollments ON users.id = enrollments.user_id AND enrollments.course_id = ?", courseID).
 		Joins("LEFT JOIN assignments ON users.id = assignments.user_id AND assignments.module_id = ?", moduleID).
-		Where("users.id IN (SELECT user_id FROM module_progresses WHERE module_id = ? AND is_complete = ?)", moduleID, true).
+		Where("users.role = ?", "student").
 		Scan(&tempResults).Error
 
 	if err != nil {
@@ -384,7 +394,8 @@ func (r *assignmentRepo) GetStudentsByModuleID(ctx context.Context, moduleID str
 	var results []domain.UserWithAssignment
 	for _, temp := range tempResults {
 		userWithAssignment := domain.UserWithAssignment{
-			User: temp.User,
+			User:            temp.User,
+			ModuleCompleted: temp.ModuleCompleted,
 		}
 		if temp.AssignmentID != 0 {
 			userWithAssignment.Assignment = &domain.Assignment{
@@ -492,6 +503,10 @@ func (r *labRepo) CountUngradedByLabID(ctx context.Context, labID uint) (int64, 
 		Where("lab_id = ? AND grade = ?", labID, "").
 		Count(&count).Error
 	return count, err
+}
+
+func (r *labRepo) DeleteGrade(ctx context.Context, userID, labID uint) error {
+	return r.db.WithContext(ctx).Where("user_id = ? AND lab_id = ?", userID, labID).Delete(&domain.LabGrade{}).Error
 }
 
 // ========== CERTIFICATE REPOSITORY ==========

@@ -98,7 +98,7 @@ type LabGrade struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
 	UserID    uint      `json:"user_id" gorm:"not null;index"`
 	LabID     uint      `json:"lab_id" gorm:"not null;index"`
-	Grade     string    `json:"grade" gorm:"type:varchar(10)"`
+	Grade     *float64  `json:"grade" gorm:"type:decimal(5,2)"`
 	Feedback  string    `json:"feedback" gorm:"type:text"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
@@ -261,7 +261,8 @@ type StudentPerformance struct {
 
 // UserWithAssignment - Student dengan data assignment untuk penilaian modul
 type UserWithAssignment struct {
-	User        User        `json:"user"`
-	Assignment  *Assignment `json:"assignment,omitempty"`
-	CompletedAt *time.Time  `json:"completed_at,omitempty"`
+	User            User        `json:"user"`
+	Assignment      *Assignment `json:"assignment,omitempty"`
+	CompletedAt     *time.Time  `json:"completed_at,omitempty"`
+	ModuleCompleted bool        `json:"module_completed"`
 }

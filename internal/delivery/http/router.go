@@ -111,6 +111,8 @@ func InitRouter(handler *Handler) *gin.Engine {
 			instructor.POST("/labs/grade", handler.SubmitLabGrade)
 			instructor.GET("/labs/:id/ungraded", handler.GetUngradedStudents)
 			instructor.GET("/labs/:id/students", handler.GetLabStudents)
+			instructor.POST("/labs/:id/students", handler.AddStudentToLab)
+			instructor.DELETE("/labs/:id/students/:user_id", handler.RemoveStudentFromLab)
 
 			// Certificates
 			instructor.GET("/certificates/pending", handler.GetPendingCertificates)
@@ -151,6 +153,9 @@ func InitRouter(handler *Handler) *gin.Engine {
 			admin.DELETE("/labs/:id", handler.DeleteLab)
 			admin.POST("/labs/grade", handler.SubmitLabGrade)
 			admin.GET("/labs/:id/ungraded", handler.GetUngradedStudents)
+			admin.GET("/labs/:id/students", handler.GetLabStudents)
+			admin.POST("/labs/:id/students", handler.AddStudentToLab)
+			admin.DELETE("/labs/:id/students/:user_id", handler.RemoveStudentFromLab)
 			admin.GET("/certificates/pending", handler.GetPendingCertificates)
 			admin.POST("/certificates/:id/approve", handler.ApproveCertificate)
 		}

@@ -773,9 +773,43 @@ func (h *WebHandler) StudentLabs(c *gin.Context) {
 		labs = []domain.Lab{}
 	}
 
+	// Get student's lab grades
+	labGrades, _ := h.LabUsecase.GetCompletedLabsByUserID(c.Request.Context(), userID)
+
+	// Create a map for quick lookup of grades by lab ID
+	gradeMap := make(map[uint]*domain.LabGrade)
+	for i := range labGrades {
+		gradeMap[labGrades[i].LabID] = &labGrades[i]
+	}
+
+	// Combine labs with grades
+	type LabWithGrade struct {
+		domain.Lab
+		Grade      *float64
+		Feedback   string
+		IsEnrolled bool
+		IsGraded   bool
+	}
+
+	var labsWithGrades []LabWithGrade
+	for _, lab := range labs {
+		lwg := LabWithGrade{
+			Lab: lab,
+		}
+		if grade, exists := gradeMap[lab.ID]; exists {
+			lwg.IsEnrolled = true
+			if grade.Grade != nil {
+				lwg.Grade = grade.Grade
+				lwg.Feedback = grade.Feedback
+				lwg.IsGraded = true
+			}
+		}
+		labsWithGrades = append(labsWithGrades, lwg)
+	}
+
 	data := gin.H{
 		"User":       dashboardData.User,
-		"Labs":       labs,
+		"Labs":       labsWithGrades,
 		"ActiveMenu": "labs",
 		"Title":      "Lab Praktikum",
 		"PageTitle":  "Lab Praktikum",

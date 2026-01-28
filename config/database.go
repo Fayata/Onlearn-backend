@@ -60,6 +60,27 @@ func ConnectDB() *Database {
 }
 
 func AutoMigrate(db *gorm.DB) error {
+	// Pre-migration: Convert existing letter grades to numeric values
+	// Check if lab_grades table exists and has grade column as varchar
+	var columnType string
+	db.Raw("SELECT data_type FROM information_schema.columns WHERE table_name = 'lab_grades' AND column_name = 'grade'").Scan(&columnType)
+	
+	if columnType == "character varying" || columnType == "varchar" {
+		log.Println("Converting letter grades to numeric values...")
+		// Convert A=90, B=80, C=70, D=60, E=50, empty/null=null
+		db.Exec(`
+			UPDATE lab_grades SET grade = CASE 
+				WHEN grade = 'A' THEN '90'
+				WHEN grade = 'B' THEN '80'
+				WHEN grade = 'C' THEN '70'
+				WHEN grade = 'D' THEN '60'
+				WHEN grade = 'E' THEN '50'
+				WHEN grade = '' OR grade IS NULL THEN NULL
+				ELSE grade
+			END
+		`)
+	}
+	
 	err := db.AutoMigrate(
 		&domain.User{},
 		&domain.Course{},
