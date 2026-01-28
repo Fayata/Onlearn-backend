@@ -55,6 +55,8 @@ func InitRouter(handler *Handler) *gin.Engine {
 			student.GET("/enrollments", handler.GetMyEnrollments)
 			student.GET("/courses/:id/modules", handler.GetModulesWithProgress)
 			student.POST("/modules/complete", handler.MarkModuleComplete)
+			student.POST("/modules/ppt/progress", handler.SavePPTProgress)
+			student.GET("/modules/ppt/progress", handler.GetPPTProgress)
 
 			// Assignments
 			student.POST("/assignments/submit", handler.SubmitAssignment)

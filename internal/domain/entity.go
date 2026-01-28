@@ -66,13 +66,14 @@ type Enrollment struct {
 
 // ModuleProgress - Track progress student per module
 type ModuleProgress struct {
-	ID         uint      `json:"id" gorm:"primaryKey"`
-	UserID     uint      `json:"user_id" gorm:"not null;index"`
-	ModuleID   string    `json:"module_id" gorm:"not null;index"` // MongoDB ObjectID
-	CourseID   uint      `json:"course_id" gorm:"not null;index"`
-	IsComplete bool      `json:"is_complete" gorm:"default:false"`
-	CreatedAt  time.Time `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt  time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+	ID             uint      `json:"id" gorm:"primaryKey"`
+	UserID         uint      `json:"user_id" gorm:"not null;index"`
+	ModuleID       string    `json:"module_id" gorm:"not null;index"` // MongoDB ObjectID
+	CourseID       uint      `json:"course_id" gorm:"not null;index"`
+	IsComplete     bool      `json:"is_complete" gorm:"default:false"`
+	LastSlideNumber *int     `json:"last_slide_number,omitempty" gorm:"default:null"` // For PPT checkpoint
+	CreatedAt      time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt      time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 type Assignment struct {

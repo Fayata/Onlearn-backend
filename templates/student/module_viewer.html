@@ -90,11 +90,13 @@
                 {{.Module.Type}}
             </span>
             
-            <!-- Download Button -->
+            <!-- Download Button (only for PDF) -->
+            {{if eq .Module.Type "pdf"}}
             <a href="{{.FileURL}}" download class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                 <i class="fas fa-download"></i>
                 Download
             </a>
+            {{end}}
             
             <!-- Mark Complete Button -->
             {{if not .IsComplete}}
@@ -182,13 +184,48 @@
                 <i class="fas fa-file-alt text-6xl mb-4 text-gray-500"></i>
                 <h2 class="text-xl font-bold mb-2">Preview tidak tersedia</h2>
                 <p class="text-gray-400 mb-4">File ini tidak dapat ditampilkan langsung di browser</p>
+                {{if eq .Module.Type "pdf"}}
                 <a href="{{.FileURL}}" download class="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors inline-flex items-center gap-2">
                     <i class="fas fa-download"></i>
                     Download File
                 </a>
+                {{end}}
             </div>
         </div>
     </div>
+
+    <!-- Screen Adjustment Modal (for PPT) -->
+    {{if eq .Module.Type "ppt"}}
+    <div id="screenAdjustModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Pilih Ukuran Layar</h2>
+            <p class="text-gray-600 mb-6">Pilih ukuran layar yang sesuai untuk menampilkan presentasi</p>
+            <div class="space-y-3">
+                <button onclick="selectScreenSize('fit')" class="screen-size-btn w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-left flex items-center justify-between" data-size="fit">
+                    <span>
+                        <i class="fas fa-expand-arrows-alt mr-2"></i>
+                        Sesuaikan dengan Layar
+                    </span>
+                    <i class="fas fa-check"></i>
+                </button>
+                <button onclick="selectScreenSize('full')" class="screen-size-btn w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors text-left flex items-center justify-between" data-size="full">
+                    <span>
+                        <i class="fas fa-desktop mr-2"></i>
+                        Layar Penuh
+                    </span>
+                    <i class="fas fa-check hidden"></i>
+                </button>
+                <button onclick="selectScreenSize('original')" class="screen-size-btn w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition-colors text-left flex items-center justify-between" data-size="original">
+                    <span>
+                        <i class="fas fa-image mr-2"></i>
+                        Ukuran Asli
+                    </span>
+                    <i class="fas fa-check hidden"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {{end}}
 
     <script>
         const moduleID = "{{.Module.ID}}";
@@ -201,6 +238,9 @@
         let currentSlide = 1;
         let totalSlides = 1;
         let slideImages = [];
+        let screenSize = 'fit'; // 'fit', 'full', 'original'
+        let readSlides = new Set(); // Track which slides have been read
+        let isAutoCompleting = false; // Prevent multiple auto-complete calls
 
         // Get authentication token from cookie
         function getAuthToken() {
@@ -243,9 +283,9 @@
                         showFallback();
                         return;
                     }
-                    // Ensure PPT viewer is visible
-                    pptViewer.style.display = 'flex';
-                    loadPPT();
+                    // Show screen adjustment modal first
+                    showScreenAdjustModal();
+                    // Load PPT after screen size is selected
                 } else {
                     console.warn('Unknown module type:', moduleType);
                     showFallback();
@@ -583,7 +623,8 @@
                 // If we have slides, display them
                 if (slideImages.length > 0 && slideImages.length >= totalSlides) {
                     totalSlides = slideImages.length;
-                    currentSlide = 1;
+                    // Load last slide from checkpoint
+                    await loadLastSlide();
                     updateSlideDisplay();
                     hideLoading();
                     const pptViewer = document.getElementById('pptViewer');
@@ -594,7 +635,8 @@
                     // If we got some images but not all, still try to show them
                     if (slideImages.length > 0) {
                         totalSlides = slideImages.length;
-                        currentSlide = 1;
+                        // Load last slide from checkpoint
+                        await loadLastSlide();
                         updateSlideDisplay();
                         hideLoading();
                         const pptViewer = document.getElementById('pptViewer');
@@ -739,24 +781,186 @@
             document.getElementById('pptViewer').classList.remove('hidden');
         }
 
+        // Screen adjustment functions
+        function showScreenAdjustModal() {
+            const modal = document.getElementById('screenAdjustModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function hideScreenAdjustModal() {
+            const modal = document.getElementById('screenAdjustModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function selectScreenSize(size) {
+            screenSize = size;
+            hideScreenAdjustModal();
+            
+            // Update button states
+            const buttons = document.querySelectorAll('.screen-size-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                btn.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+                const checkIcon = btn.querySelector('.fa-check');
+                if (checkIcon) checkIcon.classList.add('hidden');
+            });
+            
+            const selectedBtn = document.querySelector(`.screen-size-btn[data-size="${size}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+                selectedBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'text-white');
+                const checkIcon = selectedBtn.querySelector('.fa-check');
+                if (checkIcon) checkIcon.classList.remove('hidden');
+            }
+            
+            // Load PPT after selection
+            setTimeout(() => {
+                const pptViewer = document.getElementById('pptViewer');
+                if (pptViewer) pptViewer.style.display = 'flex';
+                loadPPT();
+            }, 300);
+        }
+
+        // Load last slide from checkpoint
+        async function loadLastSlide() {
+            try {
+                const token = getAuthToken();
+                if (!token) {
+                    currentSlide = 1;
+                    return;
+                }
+
+                const response = await fetch(`/api/v1/student/modules/ppt/progress?module_id=${moduleID}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.last_slide && data.last_slide > 0 && data.last_slide <= totalSlides) {
+                        currentSlide = data.last_slide;
+                        // Mark all slides up to last slide as read
+                        for (let i = 1; i <= currentSlide; i++) {
+                            readSlides.add(i);
+                        }
+                    } else {
+                        currentSlide = 1;
+                    }
+                } else {
+                    currentSlide = 1;
+                }
+            } catch (error) {
+                console.error('Error loading last slide:', error);
+                currentSlide = 1;
+            }
+        }
+
+        // Save checkpoint
+        async function saveCheckpoint() {
+            try {
+                const token = getAuthToken();
+                if (!token) return;
+
+                await fetch('/api/v1/student/modules/ppt/progress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        module_id: moduleID,
+                        course_id: courseID,
+                        slide_number: currentSlide
+                    })
+                });
+            } catch (error) {
+                console.error('Error saving checkpoint:', error);
+            }
+        }
+
+        // Check if all slides are read and auto-mark complete
+        async function checkAndAutoComplete() {
+            if (isAutoCompleting) return;
+            
+            // Check if student has reached the last slide and all slides have been viewed
+            // We consider it complete if:
+            // 1. Current slide is the last slide, AND
+            // 2. All slides from 1 to totalSlides have been read
+            if (currentSlide === totalSlides && totalSlides > 0) {
+                // Make sure all slides have been read
+                let allRead = true;
+                for (let i = 1; i <= totalSlides; i++) {
+                    if (!readSlides.has(i)) {
+                        allRead = false;
+                        break;
+                    }
+                }
+                
+                if (allRead) {
+                    const completeBtn = document.getElementById('completeBtn');
+                    if (completeBtn && !completeBtn.disabled) {
+                        isAutoCompleting = true;
+                        try {
+                            await markComplete();
+                            Toast.success('Semua slide telah dibaca. Modul ditandai selesai otomatis!');
+                        } catch (error) {
+                            console.error('Error auto-completing:', error);
+                        } finally {
+                            isAutoCompleting = false;
+                        }
+                    }
+                }
+            }
+        }
+
         function updateSlideDisplay() {
             const slideDisplay = document.getElementById('slideDisplay');
             if (slideImages.length > 0 && currentSlide <= slideImages.length) {
+                // Apply screen size setting
+                let imageClass = 'slide-image';
+                if (screenSize === 'full') {
+                    imageClass += ' w-full h-full object-cover';
+                } else if (screenSize === 'original') {
+                    imageClass += ' max-w-none max-h-none';
+                } else {
+                    imageClass += ' w-full h-full object-contain';
+                }
+
                 slideDisplay.innerHTML = `
                     <img src="${slideImages[currentSlide - 1]}" 
                          alt="Slide ${currentSlide}" 
-                         class="slide-image w-full h-full object-contain" />
+                         class="${imageClass}" />
                 `;
             }
+            
+            // Update slide info with better formatting
             if (document.getElementById('slideInfo')) {
-                document.getElementById('slideInfo').textContent = `Slide ${currentSlide} / ${totalSlides}`;
+                document.getElementById('slideInfo').textContent = `Halaman ${currentSlide} dari ${totalSlides}`;
             }
+            
             if (document.getElementById('prevBtn')) {
                 document.getElementById('prevBtn').disabled = currentSlide === 1;
             }
             if (document.getElementById('nextBtn')) {
                 document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
             }
+
+            // Mark current slide as read
+            readSlides.add(currentSlide);
+            
+            // Save checkpoint
+            saveCheckpoint();
+            
+            // Check if all slides are read
+            checkAndAutoComplete();
         }
 
         function prevSlide() {
@@ -783,7 +987,7 @@
 
         function updateSlide() {
             if (document.getElementById('slideInfo')) {
-                document.getElementById('slideInfo').textContent = `Slide ${currentSlide} / ${totalSlides}`;
+                document.getElementById('slideInfo').textContent = `Halaman ${currentSlide} dari ${totalSlides}`;
             }
             if (document.getElementById('prevBtn')) {
                 document.getElementById('prevBtn').disabled = currentSlide === 1;
@@ -791,6 +995,15 @@
             if (document.getElementById('nextBtn')) {
                 document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
             }
+            
+            // Mark current slide as read
+            readSlides.add(currentSlide);
+            
+            // Save checkpoint
+            saveCheckpoint();
+            
+            // Check if all slides are read
+            checkAndAutoComplete();
         }
 
         function toggleFullscreen() {

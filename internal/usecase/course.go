@@ -227,6 +227,37 @@ func (uc *courseUsecase) MarkModuleComplete(ctx context.Context, userID uint, mo
 	return uc.updateEnrollmentProgress(ctx, userID, courseID)
 }
 
+func (uc *courseUsecase) SavePPTProgress(ctx context.Context, userID uint, moduleID string, courseID uint, slideNumber int) error {
+	// Get existing progress or create new
+	existing, _ := uc.progressRepo.GetByUserAndModule(ctx, userID, moduleID)
+	if existing != nil {
+		existing.LastSlideNumber = &slideNumber
+		// Auto-mark complete if reached last slide (we'll check total slides in frontend)
+		return uc.progressRepo.Update(ctx, existing)
+	} else {
+		// Create new progress
+		progress := &domain.ModuleProgress{
+			UserID:         userID,
+			ModuleID:       moduleID,
+			CourseID:       courseID,
+			IsComplete:     false,
+			LastSlideNumber: &slideNumber,
+		}
+		return uc.progressRepo.Create(ctx, progress)
+	}
+}
+
+func (uc *courseUsecase) GetPPTProgress(ctx context.Context, userID uint, moduleID string) (*int, error) {
+	progress, err := uc.progressRepo.GetByUserAndModule(ctx, userID, moduleID)
+	if err != nil {
+		return nil, err
+	}
+	if progress == nil {
+		return nil, nil
+	}
+	return progress.LastSlideNumber, nil
+}
+
 func (uc *courseUsecase) updateEnrollmentProgress(ctx context.Context, userID uint, courseID uint) error {
 	enrollment, err := uc.enrollmentRepo.GetByUserAndCourse(ctx, userID, courseID)
 	if err != nil {

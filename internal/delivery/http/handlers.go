@@ -701,6 +701,54 @@ func (h *Handler) MarkModuleComplete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Module marked as complete"})
 }
 
+func (h *Handler) SavePPTProgress(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req struct {
+		ModuleID    string `json:"module_id" binding:"required"`
+		CourseID    uint   `json:"course_id" binding:"required"`
+		SlideNumber int    `json:"slide_number" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, formatValidationErrors(err))
+		return
+	}
+
+	if err := h.CourseUsecase.SavePPTProgress(c.Request.Context(), userID, req.ModuleID, req.CourseID, req.SlideNumber); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "PPT progress saved"})
+}
+
+func (h *Handler) GetPPTProgress(c *gin.Context) {
+	userID, err := getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	moduleID := c.Query("module_id")
+	if moduleID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "module_id is required"})
+		return
+	}
+
+	lastSlide, err := h.CourseUsecase.GetPPTProgress(c.Request.Context(), userID, moduleID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"last_slide": lastSlide})
+}
+
 // ========== ASSIGNMENT HANDLERS ==========
 
 func (h *Handler) SubmitAssignment(c *gin.Context) {

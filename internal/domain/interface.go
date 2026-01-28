@@ -141,6 +141,8 @@ type CourseUsecase interface {
 	// Module Progress
 	MarkModuleComplete(ctx context.Context, userID uint, moduleID string, courseID uint) error
 	GetModulesWithProgress(ctx context.Context, userID uint, courseID uint) ([]ModuleWithProgress, error)
+	SavePPTProgress(ctx context.Context, userID uint, moduleID string, courseID uint, slideNumber int) error
+	GetPPTProgress(ctx context.Context, userID uint, moduleID string) (*int, error)
 
 	// Assignments
 	SubmitAssignment(ctx context.Context, assignment *Assignment) error
