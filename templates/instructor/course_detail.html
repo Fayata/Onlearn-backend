@@ -280,7 +280,7 @@
             <div class="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800" id="gradeModuleModalTitle">Nilai Student - Modul</h3>
-                    <p class="text-sm text-gray-500 mt-1">Student yang sudah menyelesaikan quiz modul ini</p>
+                    <p class="text-sm text-gray-500 mt-1">Student yang sudah menandai selesai modul ini (quiz dikerjakan di link terpisah)</p>
                 </div>
                 <button onclick="closeGradeModuleModal()" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times text-xl"></i>
@@ -526,7 +526,7 @@
         function displayModuleStudents(moduleId, courseId, students) {
             const container = document.getElementById('moduleStudentsList');
             if (students.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500 py-8">Belum ada student yang terdaftar di course ini.</p>';
+                container.innerHTML = '<p class="text-center text-gray-500 py-8">Belum ada student yang menandai modul ini selesai.</p>';
                 return;
             }
 

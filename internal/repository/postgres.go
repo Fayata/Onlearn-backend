@@ -381,10 +381,17 @@ func (r *assignmentRepo) GetStudentsByModuleID(ctx context.Context, moduleID str
 			assignments.feedback, 
 			assignments.submitted_at, 
 			assignments.graded_at,
-			CASE WHEN EXISTS(SELECT 1 FROM module_progresses WHERE module_progresses.user_id = users.id AND module_progresses.module_id = ? AND module_progresses.is_complete = true) THEN true ELSE false END as module_completed`, moduleID).
+			CASE WHEN EXISTS(
+				SELECT 1 
+				FROM module_progresses 
+				WHERE module_progresses.user_id = users.id 
+				  AND module_progresses.module_id = ? 
+				  AND module_progresses.is_complete = true
+			) THEN true ELSE false END as module_completed`, moduleID).
 		Joins("INNER JOIN enrollments ON users.id = enrollments.user_id AND enrollments.course_id = ?", courseID).
 		Joins("LEFT JOIN assignments ON users.id = assignments.user_id AND assignments.module_id = ?", moduleID).
 		Where("users.role = ?", "student").
+		Where("EXISTS (SELECT 1 FROM module_progresses WHERE module_progresses.user_id = users.id AND module_progresses.module_id = ? AND module_progresses.is_complete = ?)", moduleID, true).
 		Scan(&tempResults).Error
 
 	if err != nil {
